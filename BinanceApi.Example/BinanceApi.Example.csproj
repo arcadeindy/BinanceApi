@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PoissonSoft.BinanceApi\PoissonSoft.BinanceApi.csproj" />
+    <ProjectReference Include="..\PoissonSoft.CommonUtils\Src\PoissonSoft.CommonUtils\PoissonSoft.CommonUtils.csproj" />
   </ItemGroup>
 
 </Project>

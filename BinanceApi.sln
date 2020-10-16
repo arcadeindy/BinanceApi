@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinanceApi.Example", "Binan
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{19B03294-457E-4D2A-BB8D-9FC9F66CF46A}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PoissonSoft.CommonUtils", "PoissonSoft.CommonUtils\Src\PoissonSoft.CommonUtils\PoissonSoft.CommonUtils.csproj", "{5371D45D-27E7-43F7-A218-7D867C9258EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,12 +25,17 @@ Global
 		{272FDFE8-4180-4219-9987-8DD46146E3A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{272FDFE8-4180-4219-9987-8DD46146E3A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{272FDFE8-4180-4219-9987-8DD46146E3A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5371D45D-27E7-43F7-A218-7D867C9258EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5371D45D-27E7-43F7-A218-7D867C9258EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5371D45D-27E7-43F7-A218-7D867C9258EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5371D45D-27E7-43F7-A218-7D867C9258EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{272FDFE8-4180-4219-9987-8DD46146E3A1} = {19B03294-457E-4D2A-BB8D-9FC9F66CF46A}
+		{5371D45D-27E7-43F7-A218-7D867C9258EA} = {19B03294-457E-4D2A-BB8D-9FC9F66CF46A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {388BCDDC-0F66-4F16-8902-4566BFC2264B}
