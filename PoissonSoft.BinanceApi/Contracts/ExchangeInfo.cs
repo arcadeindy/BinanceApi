@@ -20,7 +20,7 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// <summary>
         /// Серверное время
         /// </summary>
-        [JsonProperty("timezone")]
+        [JsonProperty("serverTime")]
         public long ServerTime { get; set; }
 
         /// <summary>

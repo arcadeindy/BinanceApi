@@ -10,4 +10,10 @@
     <ProjectReference Include="..\PoissonSoft.CommonUtils\Src\PoissonSoft.CommonUtils\PoissonSoft.CommonUtils.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="nlog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

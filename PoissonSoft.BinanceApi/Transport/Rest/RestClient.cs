@@ -54,6 +54,8 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
                 Proxy = ProxyHelper.CreateProxy(credentials)
             };
 
+            baseEndpoint = baseEndpoint.Trim();
+            if (!baseEndpoint.EndsWith("/")) baseEndpoint += '/';
             httpClient = new HttpClient(httpClientHandler, true)
             {
                 Timeout = TimeSpan.FromSeconds(20),
@@ -75,12 +77,28 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
         /// <param name="urlPath">Путь к ресурсу (без базового адреса ендпоинта)</param>
         /// <param name="method"></param>
         /// <param name="requestWeight">Вес запроса в баллах</param>
+        /// <param name="isOrderRequest">Это запрос на работу с ордерами (размещение/удаление/модификация)</param>
         /// <param name="getParams"></param>
         /// <param name="postObject"></param>
         /// <returns></returns>
-        public TResp MakeRequest<TResp>(string method, string urlPath, int requestWeight,
+        public TResp MakeRequest<TResp>(string method, string urlPath, int requestWeight, bool isOrderRequest,
             Dictionary<string, string> getParams = null, object postObject = null)
         {
+            throttler.ThrottleRest(requestWeight, isOrderRequest);
+            
+
+            void checkResponse(HttpResponseMessage resp, string body)
+            {
+                throttler.ApplyRestResponseHeaders(resp.Headers);
+
+                if (resp.StatusCode != HttpStatusCode.OK)
+                {
+                    logger.Error($"{userFriendlyName}. На запрос {urlPath} от сервера получен код ответа {resp.StatusCode}");
+                    throw new EndpointCommunicationException(
+                        $"{userFriendlyName}. На запрос {urlPath} от сервера получен код ответа {(int)resp.StatusCode} ({resp.StatusCode})\nТело ответа:\n{body}");
+                }
+            }
+
             string strResp = null;
             try
             {
@@ -92,15 +110,8 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
                         {
                             using (var result = httpClient.PostAsync(urlPath, content).Result)
                             {
-
                                 strResp = result.Content.ReadAsStringAsync().Result;
-
-                                if (result.StatusCode != HttpStatusCode.OK)
-                                {
-                                    logger.Error($"{userFriendlyName}. На запрос {urlPath} от сервера получен код ответа {result.StatusCode}");
-                                    throw new EndpointCommunicationException(
-                                        $"{userFriendlyName}. На запрос {urlPath} от сервера получен код ответа {(int) result.StatusCode} ({result.StatusCode})\nТело ответа:\n{strResp}");
-                                }
+                                checkResponse(result, strResp);
                             }
                         }
 
@@ -111,6 +122,7 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
                         using (var result = httpClient.GetAsync(url).Result)
                         {
                             strResp = result.Content.ReadAsStringAsync().Result;
+                            checkResponse(result, strResp);
                         }
 
                         break;
@@ -164,7 +176,7 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
 
         public void Dispose()
         {
-            
+            httpClient?.Dispose();
         }
     }
 

@@ -1,10 +1,13 @@
 ﻿using System;
+using NLog;
 using PoissonSoft.BinanceApi;
 
 namespace BinanceApi.Example
 {
     class Program
     {
+        private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
+
         static void Main(string[] args)
         {
             ICredentialsProvider credentialsProvider = new NppCryptProvider();
@@ -19,6 +22,9 @@ namespace BinanceApi.Example
                 return;
             }
 
+            var apiClient = new BinanceApiClient(credentials, logger);
+
+            new ActionManager(apiClient).Run();
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -12,6 +13,8 @@ namespace PoissonSoft.BinanceApi.Contracts.Serialization
     public class StringEnumExConverter : StringEnumConverter
     {
         private readonly Enum defaultValue;
+        private readonly ConcurrentDictionary<string, object> errors = new ConcurrentDictionary<string, object>();
+        private DateTimeOffset clearErrorCacheTime = DateTimeOffset.UtcNow.AddMinutes(10);
 
         /// <summary/>
         public StringEnumExConverter(){}
@@ -35,13 +38,35 @@ namespace PoissonSoft.BinanceApi.Contracts.Serialization
             }
             catch (Exception e)
             {
-                var msg =
-                    $"Не удалось преобразовать {JObject.Load(reader)} в тип {objectType.Name}. Ошибка: {e.Message}";
-                if (defaultValue != null)
+                string problemItem = "<PARSING ERROR>";
+                try
                 {
-                    msg += $"\n Будет использовано значение {defaultValue}";
+                    problemItem = JToken.Load(reader).ToString();
                 }
-                SerializationContext.GetLogger(serializer)?.Error(msg);
+                catch
+                {
+                    // ignore
+                }
+
+                if (DateTimeOffset.UtcNow > clearErrorCacheTime)
+                {
+                    errors.Clear();
+                    clearErrorCacheTime = DateTimeOffset.UtcNow.AddMinutes(10);
+                }
+
+                if (!errors.TryGetValue(problemItem, out _))
+                {
+                    var msg =
+                        $"Не удалось преобразовать {problemItem} в тип {objectType.Name}. Ошибка: {e.Message}";
+                    if (defaultValue != null)
+                    {
+                        msg += $"\n Будет использовано значение {defaultValue}";
+                    }
+                    SerializationContext.GetLogger(serializer)?.Error(msg);
+
+                    errors.TryAdd(problemItem, null);
+                }
+                
                 if (defaultValue == null) throw;
                 return defaultValue;
             }

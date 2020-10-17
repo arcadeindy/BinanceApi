@@ -23,5 +23,9 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// <summary/>
         [EnumMember(Value = "FUTURES")]
         Futures,
+
+        /// <summary/>
+        [EnumMember(Value = "LEVERAGED")]
+        Leveraged,
     }
 }
