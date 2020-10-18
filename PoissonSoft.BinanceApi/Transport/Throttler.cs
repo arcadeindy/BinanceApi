@@ -5,15 +5,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Utils;
 
 namespace PoissonSoft.BinanceApi.Transport
 {
-    internal class Throttler
+    internal class Throttler: IDisposable
     {
         private readonly BinanceApiClient apiClient;
         private readonly int maxDegreeOfParallelism;
         private readonly string userFriendlyName = nameof(Throttler);
-
+        private readonly WaitablePool syncPool;
+        
         // "Стоимость" одного бала в миллисекундах для каждого из параллельно исполняемых запросов.
         // Т.е. если в конкретном потоке (одном из всех maxDegreeOfParallelism параллельных) выполняется запрос
         // с весом 1 балл, то этот поток не должен проводить новых запросов в течение requestWeightCostInMs миллисекунд
@@ -35,7 +37,7 @@ namespace PoissonSoft.BinanceApi.Transport
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
             this.maxDegreeOfParallelism = maxDegreeOfParallelism;
             if (this.maxDegreeOfParallelism < 1) this.maxDegreeOfParallelism = 1;
-
+            
             ApplyLimits(new []
             {
                 new RateLimit
@@ -61,7 +63,7 @@ namespace PoissonSoft.BinanceApi.Transport
                 },
             });
 
-
+            syncPool = new WaitablePool(this.maxDegreeOfParallelism);
         }
 
         /// <summary>
@@ -109,7 +111,20 @@ namespace PoissonSoft.BinanceApi.Transport
         /// <param name="isOrderRequest"></param>
         public void ThrottleRest(int requestWeight, bool isOrderRequest)
         {
-            // TODO:
+            var dt = DateTimeOffset.UtcNow;
+            var locker = syncPool.Wait();
+            locker.UnlockAfterMs(requestWeight * weightUnitCostInMs);
+            var waitTime = (DateTimeOffset.UtcNow - dt).TotalSeconds;
+            if (waitTime > 5)
+            {
+                apiClient.Logger.Warn($"{userFriendlyName}. Время ожидания тротлинга составило {waitTime:F0} секунд. " +
+                                      "Возможно, следует оптимизировать прикладные алгоритмы с целью сокращения количества запросов");
+            }
+
+            if (AutoUpdateLimits && ssUpdateLimits.Check())
+            {
+                Task.Run(UpdateLimits);
+            }
         }
 
         /// <summary>
@@ -121,10 +136,36 @@ namespace PoissonSoft.BinanceApi.Transport
         ///     Every successful order response will contain a X-MBX-ORDER-COUNT-(intervalNum)(intervalLetter) header which
         ///     has the current order count for the account for all order rate limiters defined.
         /// </summary>
-        /// <param name="heeders"></param>
-        public void ApplyRestResponseHeaders(HttpResponseHeaders heeders)
+        /// <param name="headers"></param>
+        public void ApplyRestResponseHeaders(HttpResponseHeaders headers)
         {
             // TODO:
+            // Not implemented yet
+        }
+
+        private readonly SimpleScheduler ssUpdateLimits = new SimpleScheduler(TimeSpan.FromMinutes(10));
+        private readonly object syncUpdateLimits = new object();
+        private void UpdateLimits()
+        {
+            lock (syncUpdateLimits)
+            {
+                if (!ssUpdateLimits.Check()) return;
+                try
+                {
+                    var exchangeInfo = apiClient.MarketDataApi.GetExchangeInfo();
+                    ApplyLimits(exchangeInfo.RateLimits);
+                    ssUpdateLimits.Done();
+                }
+                catch (Exception e)
+                {
+                    apiClient.Logger.Error($"{userFriendlyName}. Exception when limit update\n{e}");
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            syncPool?.Dispose();
         }
     }
 }

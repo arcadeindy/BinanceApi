@@ -67,7 +67,9 @@ namespace PoissonSoft.BinanceApi
             spotAccountApi?.Dispose();
 
             if (spotDataCollector.IsStarted) spotDataCollector.Stop();
-
+            
+            Throttler?.Dispose();
+            
             // TODO:
         }
     }

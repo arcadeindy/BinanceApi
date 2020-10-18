@@ -7,7 +7,7 @@ using PoissonSoft.CommonUtils.ConsoleUtils;
 
 namespace BinanceApi.Example
 {
-    internal class ActionManager
+    internal partial class ActionManager
     {
         private readonly BinanceApiClient apiClient;
 
@@ -29,9 +29,14 @@ namespace BinanceApi.Example
             Console.Clear();
             var actions = new Dictionary<ConsoleKey, string>()
             {
-                [ConsoleKey.W] = "Wallet API",
-                [ConsoleKey.M] = "Market Data API",
-                [ConsoleKey.S] = "Spot Account/Trade API",
+                [ConsoleKey.A] = "Wallet API",
+
+                [ConsoleKey.B] = "Market Data API",
+
+                [ConsoleKey.C] = "Spot Account API",
+                [ConsoleKey.D] = "Spot Data Stream",
+                [ConsoleKey.E] = "Spot Data Collector",
+
                 [ConsoleKey.Escape] = "Go back (exit)",
             };
 
@@ -39,17 +44,27 @@ namespace BinanceApi.Example
 
             switch (selectedAction)
             {
-                case ConsoleKey.W:
+                case ConsoleKey.A:
                     // TODO:
                     Console.WriteLine("Not implemented yet");
                     return true;
-                case ConsoleKey.M:
+
+                case ConsoleKey.B:
                     while (ShowMarketDataPage()) { }
                     return true;
-                case ConsoleKey.S:
-                    // TODO:
-                    Console.WriteLine("Not implemented yet");
+
+                case ConsoleKey.C:
+                    while (ShowSpotAccountApiPage()) { }
                     return true;
+
+                case ConsoleKey.D:
+                    while (ShowSpotDataStreamPage()) { }
+                    return true;
+
+                case ConsoleKey.E:
+                    while (ShowSpotDataCollectorPage()) { }
+                    return true;
+
                 case ConsoleKey.Escape:
                     return false;
                 default:
@@ -57,34 +72,10 @@ namespace BinanceApi.Example
             }
         }
 
-        private bool ShowMarketDataPage()
-        {
-            var actions = new Dictionary<ConsoleKey, string>()
-            {
-                [ConsoleKey.I] = "Exchange Information",
-                [ConsoleKey.Escape] = "Go back (to main menu)",
-            };
+        
 
-            var selectedAction = InputHelper.GetUserAction("Select action:", actions);
 
-            switch (selectedAction)
-            {
-                case ConsoleKey.I:
-                    SafeCall(() =>
-                    {
-                        var exchangeInfo = apiClient.MarketDataApi.GetExchangeInfo();
-                        Console.WriteLine(JsonConvert.SerializeObject(exchangeInfo, Formatting.Indented, new JsonSerializerSettings
-                        {
-                            MaxDepth = 1
-                        }));
-                    });
-                    return true;
-                case ConsoleKey.Escape:
-                    return false;
-                default:
-                    return true;
-            }
-        }
+
 
         private void SafeCall(Action action)
         {

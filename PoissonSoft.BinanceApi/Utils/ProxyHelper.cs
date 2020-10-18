@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace PoissonSoft.BinanceApi.Transport
+namespace PoissonSoft.BinanceApi.Utils
 {
     internal static class ProxyHelper
     {

@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts.Exceptions;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
+using PoissonSoft.BinanceApi.Utils;
 
 namespace PoissonSoft.BinanceApi.Transport.Rest
 {
