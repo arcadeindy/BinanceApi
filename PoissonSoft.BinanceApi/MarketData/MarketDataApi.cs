@@ -30,7 +30,7 @@ namespace PoissonSoft.BinanceApi.MarketData
         }
         private ExchangeInfo LoadExchangeInfo()
         {
-            return client.MakeRequest<ExchangeInfo>(RestClient.METHOD_GET, "exchangeInfo", 1, false);
+            return client.MakeRequest<ExchangeInfo>(RestClient.METHOD_GET, "exchangeInfo", 1, false, false);
         }
 
         public void Dispose()

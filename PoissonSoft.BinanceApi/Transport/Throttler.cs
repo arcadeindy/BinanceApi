@@ -13,6 +13,7 @@ namespace PoissonSoft.BinanceApi.Transport
     {
         private readonly BinanceApiClient apiClient;
         private readonly int maxDegreeOfParallelism;
+        private readonly int highPriorityFeedsCount;
         private readonly string userFriendlyName = nameof(Throttler);
         private readonly WaitablePool syncPool;
         
@@ -32,12 +33,17 @@ namespace PoissonSoft.BinanceApi.Transport
         /// </summary>
         /// <param name="apiClient"></param>
         /// <param name="maxDegreeOfParallelism">Максимальное допустимое количество параллельно выполняемых запросов</param>
-        public Throttler(BinanceApiClient apiClient, int maxDegreeOfParallelism = 5)
+        /// <param name="highPriorityFeedsCount">Количество feeds, выделяемое под исполнение запросов с высоким приоритетом</param>
+        public Throttler(BinanceApiClient apiClient, int maxDegreeOfParallelism = 5, int highPriorityFeedsCount = 1)
         {
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
             this.maxDegreeOfParallelism = maxDegreeOfParallelism;
             if (this.maxDegreeOfParallelism < 1) this.maxDegreeOfParallelism = 1;
-            
+
+            if (highPriorityFeedsCount >= this.maxDegreeOfParallelism)
+                highPriorityFeedsCount = this.maxDegreeOfParallelism - 1;
+
+
             ApplyLimits(new []
             {
                 new RateLimit
@@ -63,7 +69,7 @@ namespace PoissonSoft.BinanceApi.Transport
                 },
             });
 
-            syncPool = new WaitablePool(this.maxDegreeOfParallelism);
+            syncPool = new WaitablePool(this.maxDegreeOfParallelism, highPriorityFeedsCount);
         }
 
         /// <summary>
@@ -108,11 +114,12 @@ namespace PoissonSoft.BinanceApi.Transport
         /// REST-request throttling
         /// </summary>
         /// <param name="requestWeight"></param>
+        /// <param name="highPriority"></param>
         /// <param name="isOrderRequest"></param>
-        public void ThrottleRest(int requestWeight, bool isOrderRequest)
+        public void ThrottleRest(int requestWeight, bool highPriority, bool isOrderRequest)
         {
             var dt = DateTimeOffset.UtcNow;
-            var locker = syncPool.Wait();
+            var locker = syncPool.Wait(highPriority);
             locker.UnlockAfterMs(requestWeight * weightUnitCostInMs);
             var waitTime = (DateTimeOffset.UtcNow - dt).TotalSeconds;
             if (waitTime > 5)

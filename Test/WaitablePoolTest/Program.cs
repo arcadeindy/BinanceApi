@@ -11,27 +11,36 @@ namespace WaitablePoolTest
     {
         static void Main(string[] args)
         {
-            var syncPool = new WaitablePool(5);
+            var syncPool = new WaitablePool(5, 1);
 
             var callStats = new ConcurrentDictionary<int, DateTimeOffset>();
 
             for (int i = 0; i < 100; i++)
             {
-                new Thread(() =>
+                
+                new Thread(id =>
                 {
+                    var highPriority = id != null && (int)id % 10 == 0;
+                    var name = highPriority
+                        ? $"High Priority thread #{id}"
+                        : $"Standard thread #{id}";
+                    Console.WriteLine($"{name} was started");
+
                     // ReSharper disable once AccessToDisposedClosure
-                    var locker = syncPool.Wait();
+                    var locker = syncPool.Wait(highPriority);
                     var dt = DateTimeOffset.UtcNow;
+                    locker.UnlockAfterMs(5000);
+
                     Console.WriteLine(
                         callStats.TryGetValue(locker.Id, out var lastCall)
-                            ? $"Locker {locker.Id} was captured after a timeout of {(dt - lastCall).TotalMilliseconds:F0} ms"
-                            : $"Locker {locker.Id} was captured first time");
+                            ? $"{name} finished. The locker {locker.Id} was used after a timeout of {(dt - lastCall).TotalMilliseconds:F0} ms"
+                            : $"{name} finished. The locker {locker.Id} was used first time");
                     callStats[locker.Id] = dt;
-                    locker.UnlockAfterMs(5000);
-                }).Start();
+                }).Start(i);
+
+                Thread.Sleep(100);
             }
 
-            
             Console.ReadKey();
             syncPool.Dispose();
         }

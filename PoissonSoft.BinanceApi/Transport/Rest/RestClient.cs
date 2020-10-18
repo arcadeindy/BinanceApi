@@ -78,14 +78,16 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
         /// <param name="urlPath">Путь к ресурсу (без базового адреса ендпоинта)</param>
         /// <param name="method"></param>
         /// <param name="requestWeight">Вес запроса в баллах</param>
+        /// <param name="highPriority">Признак того, что высокого приоритета запроса</param>
         /// <param name="isOrderRequest">Это запрос на работу с ордерами (размещение/удаление/модификация)</param>
         /// <param name="getParams"></param>
         /// <param name="postObject"></param>
         /// <returns></returns>
-        public TResp MakeRequest<TResp>(string method, string urlPath, int requestWeight, bool isOrderRequest,
+        public TResp MakeRequest<TResp>(string method, string urlPath, 
+            int requestWeight, bool highPriority, bool isOrderRequest,
             Dictionary<string, string> getParams = null, object postObject = null)
         {
-            throttler.ThrottleRest(requestWeight, isOrderRequest);
+            throttler.ThrottleRest(requestWeight, highPriority, isOrderRequest);
             
 
             void checkResponse(HttpResponseMessage resp, string body)

@@ -7,38 +7,52 @@ namespace PoissonSoft.BinanceApi.Utils
 {
     internal sealed class WaitablePool: IDisposable
     {
-        private readonly WaitHandle[] syncEvents;
-        private readonly FeedLocker[] lockers;
-        
+        private readonly WaitHandle[] syncEventsStd;
+        private readonly FeedLocker[] lockersStd;
 
-        public WaitablePool(int feedsCount)
+        private readonly WaitHandle[] syncEventsHighPriority;
+        private readonly FeedLocker[] lockersHighPriority;
+
+
+        public WaitablePool(int feedsCount, int highPriorityFeedsCount)
         {
-            syncEvents = new WaitHandle[feedsCount];
-            lockers = new FeedLocker[feedsCount];
+            syncEventsHighPriority = new WaitHandle[feedsCount];
+            lockersHighPriority = new FeedLocker[feedsCount];
+
+            syncEventsStd = new WaitHandle[feedsCount - highPriorityFeedsCount];
+            lockersStd = new FeedLocker[feedsCount - highPriorityFeedsCount];
 
             for (int i = 0; i < feedsCount; i++)
             {
                 var evt = new AutoResetEvent(true);
-                syncEvents[i] = evt;
-                lockers[i] = new FeedLocker(evt, i);
+                syncEventsHighPriority[i] = evt;
+                lockersHighPriority[i] = new FeedLocker(evt, i);
+
+                if (i < feedsCount - highPriorityFeedsCount)
+                {
+                    syncEventsStd[i] = evt;
+                    lockersStd[i] = lockersHighPriority[i];
+                }
             }
         }
 
-        public FeedLocker Wait()
+        public FeedLocker Wait(bool highPriority)
         {
-            return lockers[WaitHandle.WaitAny(syncEvents)];
+            return highPriority 
+                ? lockersHighPriority[WaitHandle.WaitAny(syncEventsHighPriority)]
+                : lockersStd[WaitHandle.WaitAny(syncEventsStd)];
         }
 
         public void Dispose()
         {
-            if (lockers?.Any() == true)
+            if (lockersStd?.Any() == true)
             {
-                foreach (var locker in lockers) locker?.Dispose();
+                foreach (var locker in lockersStd) locker?.Dispose();
             }
 
-            if (syncEvents?.Any() == true)
+            if (syncEventsStd?.Any() == true)
             {
-                foreach (var syncEvent in syncEvents) syncEvent?.Dispose();
+                foreach (var syncEvent in syncEventsStd) syncEvent?.Dispose();
             }
         }
     }
