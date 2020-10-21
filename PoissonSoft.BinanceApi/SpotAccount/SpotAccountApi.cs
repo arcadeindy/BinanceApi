@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Transport;
@@ -21,7 +22,7 @@ namespace PoissonSoft.BinanceApi.SpotAccount
 
         public AccountInformation GetAccountInformation()
         {
-            throw new NotImplementedException();
+            return client.MakeRequest<AccountInformation>(new RequestParameters(HttpMethod.Get, "account", 5));
         }
 
         public void Dispose()

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Net.Http.Headers;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Contracts.Exceptions;
 using PoissonSoft.BinanceApi.Utils;
 
 namespace PoissonSoft.BinanceApi.Transport
@@ -12,21 +14,37 @@ namespace PoissonSoft.BinanceApi.Transport
     internal class Throttler: IDisposable
     {
         private readonly BinanceApiClient apiClient;
-        private readonly int maxDegreeOfParallelism;
-        private readonly int highPriorityFeedsCount;
+
         private readonly string userFriendlyName = nameof(Throttler);
         private readonly WaitablePool syncPool;
         
         // "Стоимость" одного бала в миллисекундах для каждого из параллельно исполняемых запросов.
-        // Т.е. если в конкретном потоке (одном из всех maxDegreeOfParallelism параллельных) выполняется запрос
+        // Т.е. если в конкретном потоке (одном из всех MaxDegreeOfParallelism параллельных) выполняется запрос
         // с весом 1 балл, то этот поток не должен проводить новых запросов в течение requestWeightCostInMs миллисекунд
         private int weightUnitCostInMs;
+
+        // Значение по умолчанию для времени приостановки запросов после превышения лимита (в секундах)
+        private int defaultRetryAfterSec = 60;
+
+        // Время (UTC), до которого приостановлены все запросы в связи с превышением лимита
+        private object rateLimitPausedTime = DateTimeOffset.MinValue;
 
         /// <summary>
         /// Включение/выключение автоматического обновления актуальных лимитов.
         /// По умолчанию авто-обновление включено
         /// </summary>
         public bool AutoUpdateLimits { get; set; } = true;
+
+        /// <summary>
+        /// Максимальное количество параллельно выполняемых запросов
+        /// </summary>
+        public int MaxDegreeOfParallelism { get; }
+
+        /// <summary>
+        /// Количество Feeds, выделяемых под высоко-приоритетные запросы
+        /// Значение должно быть строго меньше чем <see cref="MaxDegreeOfParallelism"/>
+        /// </summary>
+        public int HighPriorityFeedsCount { get; }
 
         /// <summary>
         /// Create instance
@@ -37,11 +55,12 @@ namespace PoissonSoft.BinanceApi.Transport
         public Throttler(BinanceApiClient apiClient, int maxDegreeOfParallelism = 5, int highPriorityFeedsCount = 1)
         {
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-            this.maxDegreeOfParallelism = maxDegreeOfParallelism;
-            if (this.maxDegreeOfParallelism < 1) this.maxDegreeOfParallelism = 1;
+            MaxDegreeOfParallelism = maxDegreeOfParallelism;
+            if (MaxDegreeOfParallelism < 1) MaxDegreeOfParallelism = 1;
 
-            if (highPriorityFeedsCount >= this.maxDegreeOfParallelism)
-                highPriorityFeedsCount = this.maxDegreeOfParallelism - 1;
+            HighPriorityFeedsCount = highPriorityFeedsCount;
+            if (HighPriorityFeedsCount >= MaxDegreeOfParallelism)
+                HighPriorityFeedsCount = MaxDegreeOfParallelism - 1;
 
 
             ApplyLimits(new []
@@ -69,7 +88,7 @@ namespace PoissonSoft.BinanceApi.Transport
                 },
             });
 
-            syncPool = new WaitablePool(this.maxDegreeOfParallelism, highPriorityFeedsCount);
+            syncPool = new WaitablePool(this.MaxDegreeOfParallelism, highPriorityFeedsCount);
         }
 
         /// <summary>
@@ -80,13 +99,14 @@ namespace PoissonSoft.BinanceApi.Transport
         {
             // В данной реализации учитываем пока только лимит на вес запросов с одного IP.
             // лимит количества ордеров не отслеживаем
+            var validRateLimits = limits?.Where(x =>
+                x.RateLimitType == RateLimitType.RequestWeight &&
+                x.IntervalUnit > 0 &&
+                x.IntervalNum > 0 &&
+                x.Limit > 0).ToArray();
 
-            var weightPerSecondLimits = limits?.Where(x =>
-                    x.RateLimitType == RateLimitType.RequestWeight &&
-                    x.IntervalUnit > 0 &&
-                    x.IntervalNum > 0 &&
-                    x.Limit > 0)
-                .Select(x => (double) x.Limit / ((int) x.IntervalUnit * x.IntervalNum))
+            var weightPerSecondLimits = validRateLimits
+                ?.Select(x => (double) x.Limit / ((int) x.IntervalUnit * x.IntervalNum))
                 .Where(x => x > 0)
                 .ToArray();
 
@@ -105,9 +125,16 @@ namespace PoissonSoft.BinanceApi.Transport
                     "для лимита весов запросов в секунду");
             }
 
-            var costMs = (int)Math.Ceiling(1000 / minWeightPerSecondLimit) * maxDegreeOfParallelism;
+            var costMs = (int)Math.Ceiling(1000 / minWeightPerSecondLimit) * MaxDegreeOfParallelism;
 
             Interlocked.Exchange(ref weightUnitCostInMs, costMs);
+
+            var timeFrames = validRateLimits
+                ?.Select(x => (int) x.IntervalUnit * x.IntervalNum)
+                .Where(x => x > 0)
+                .ToArray();
+            var maxTimeFrame = timeFrames?.Any() == true ? timeFrames.Max() : 60;
+            Interlocked.Exchange(ref defaultRetryAfterSec, maxTimeFrame);
         }
 
         /// <summary>
@@ -132,6 +159,13 @@ namespace PoissonSoft.BinanceApi.Transport
             {
                 Task.Run(UpdateLimits);
             }
+
+            // Здесь не используем Interlocked для чтения rateLimitPausedTime по следующим соображениям:
+            // - кривое значение будет прочитано в исключительно редких случаях, при этом возможно будет пропущен запрос, который следовало пресечь, или
+            //   остановлен запрос, который следовало пропустить. Это не является большой проблемой
+            // - в подавляющем большинстве случаев запрос будет пропускаться, при этом лишняя задержка на Interlocked операцию здесь выглядит совсем лишней
+            if (DateTimeOffset.UtcNow < (DateTimeOffset)rateLimitPausedTime)
+                throw new RequestRateLimitBreakingException($"All requests banned until {(DateTimeOffset)rateLimitPausedTime}");
         }
 
         /// <summary>
@@ -150,6 +184,22 @@ namespace PoissonSoft.BinanceApi.Transport
             // Not implemented yet
         }
 
+        /// <summary>
+        /// HTTP 429 return code is used when breaking a request rate limit.
+        /// HTTP 418 return code is used when an IP has been auto-banned for continuing to send requests after receiving 429 codes.
+        /// A Retry-After header is sent with a 418 or 429 responses and will give the number of seconds required to wait, in the case of a 429,
+        /// to prevent a ban, or, in the case of a 418, until the ban is over.
+        /// </summary>
+        /// <param name="retryAfter">Время приостановки приёма запросов</param>
+        public void StopAllRequestsDueToRateLimit(TimeSpan? retryAfter)
+        {
+            var timeout = retryAfter ?? TimeSpan.FromSeconds(defaultRetryAfterSec);
+
+            var pausedTime = DateTimeOffset.UtcNow + timeout;
+
+            Interlocked.Exchange(ref rateLimitPausedTime, pausedTime);
+        }
+
         private readonly SimpleScheduler ssUpdateLimits = new SimpleScheduler(TimeSpan.FromMinutes(10));
         private readonly object syncUpdateLimits = new object();
         private void UpdateLimits()
@@ -160,7 +210,7 @@ namespace PoissonSoft.BinanceApi.Transport
                 try
                 {
                     var exchangeInfo = apiClient.MarketDataApi.GetExchangeInfo();
-                    ApplyLimits(exchangeInfo.RateLimits);
+                    ApplyLimits(exchangeInfo?.RateLimits);
                     ssUpdateLimits.Done();
                 }
                 catch (Exception e)

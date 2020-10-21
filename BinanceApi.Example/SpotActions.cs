@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 using PoissonSoft.CommonUtils.ConsoleUtils;
 
 namespace BinanceApi.Example
@@ -11,6 +12,8 @@ namespace BinanceApi.Example
         {
             var actions = new Dictionary<ConsoleKey, string>()
             {
+                [ConsoleKey.A] = "Account Information",
+
                 [ConsoleKey.Escape] = "Go back",
             };
 
@@ -18,6 +21,14 @@ namespace BinanceApi.Example
 
             switch (selectedAction)
             {
+                case ConsoleKey.A:
+                    SafeCall(() =>
+                    {
+                        var exchangeInfo = apiClient.SpotAccountApi.GetAccountInformation();
+                        Console.WriteLine(JsonConvert.SerializeObject(exchangeInfo, Formatting.Indented));
+                    });
+                    return true;
+
                 case ConsoleKey.Escape:
                     return false;
                 default:

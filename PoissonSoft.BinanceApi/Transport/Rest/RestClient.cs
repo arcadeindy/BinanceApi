@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -24,9 +25,7 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
 
         private readonly HttpClient httpClient;
         private readonly bool useSignature;
-
-        public const string METHOD_GET = "GET";
-        public const string METHOD_POST = "POST";
+        private readonly byte[] secretKey;
 
         private readonly JsonSerializerSettings serializerSettings;
 
@@ -40,6 +39,7 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
             useSignature = securityTypes?.Any(x =>
                 x == EndpointSecurityType.Trade || x == EndpointSecurityType.Margin ||
                 x == EndpointSecurityType.UserData) ?? false;
+            secretKey = Encoding.UTF8.GetBytes(credentials.SecretKey);
 
             userFriendlyName = $"{nameof(RestClient)} ({baseEndpoint})";
 
@@ -75,62 +75,80 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
         /// Выполнить запрос
         /// </summary>
         /// <typeparam name="TResp">Тип возвращаемого значения</typeparam>
-        /// <param name="urlPath">Путь к ресурсу (без базового адреса ендпоинта)</param>
-        /// <param name="method"></param>
-        /// <param name="requestWeight">Вес запроса в баллах</param>
-        /// <param name="highPriority">Признак того, что высокого приоритета запроса</param>
-        /// <param name="isOrderRequest">Это запрос на работу с ордерами (размещение/удаление/модификация)</param>
-        /// <param name="getParams"></param>
-        /// <param name="postObject"></param>
         /// <returns></returns>
-        public TResp MakeRequest<TResp>(string method, string urlPath, 
-            int requestWeight, bool highPriority, bool isOrderRequest,
-            Dictionary<string, string> getParams = null, object postObject = null)
+        public TResp MakeRequest<TResp>(RequestParameters requestParameters)
         {
-            throttler.ThrottleRest(requestWeight, highPriority, isOrderRequest);
+            throttler.ThrottleRest(requestParameters.RequestWeight, requestParameters.IsHighPriority, requestParameters.IsOrderRequest);
             
 
             void checkResponse(HttpResponseMessage resp, string body)
             {
                 throttler.ApplyRestResponseHeaders(resp.Headers);
 
-                if (resp.StatusCode != HttpStatusCode.OK)
+                if (resp.StatusCode == HttpStatusCode.OK) return;
+
+                string msg;
+
+                // HTTP 429 return code is used when breaking a request rate limit.
+                // HTTP 418 return code is used when an IP has been auto-banned for continuing to send requests after receiving 429 codes.
+                // A Retry-After header is sent with a 418 or 429 responses and will give the number of seconds required to wait, in the case of a 429,
+                // to prevent a ban, or, in the case of a 418, until the ban is over.
+                if (resp.StatusCode == (HttpStatusCode)429 || resp.StatusCode == (HttpStatusCode)418)
                 {
-                    logger.Error($"{userFriendlyName}. На запрос {urlPath} от сервера получен код ответа {resp.StatusCode}");
-                    throw new EndpointCommunicationException(
-                        $"{userFriendlyName}. На запрос {urlPath} от сервера получен код ответа {(int)resp.StatusCode} ({resp.StatusCode})\nТело ответа:\n{body}");
+                    var retryAfter = resp.Headers.RetryAfter?.Delta;
+                    throttler.StopAllRequestsDueToRateLimit(retryAfter);
+
+                    msg = $"{userFriendlyName}. Обнаружено превышение лимита запросов. " +
+                          $"{(int) resp.StatusCode} ({resp.ReasonPhrase}). Retry-After={retryAfter}";
+                    logger.Error(msg);
+                    throw new RequestRateLimitBreakingException(msg);
                 }
+
+                msg = $"{userFriendlyName}. На запрос {requestParameters.UrlPath} от сервера получен код ответа" +
+                      $" {(int) resp.StatusCode} ({resp.StatusCode})\nТело ответа:\n{body}";
+                logger.Error(msg);
+                throw new EndpointCommunicationException(msg);
             }
 
             string strResp = null;
             try
             {
-                switch (method)
+                string queryString;
+                string url;
+                if (requestParameters.Method == HttpMethod.Post)
                 {
-                    case METHOD_POST:
-                        using (var content =
-                            new StringContent(JsonConvert.SerializeObject(postObject), Encoding.UTF8, "application/json"))
-                        {
-                            using (var result = httpClient.PostAsync(urlPath, content).Result)
-                            {
-                                strResp = result.Content.ReadAsStringAsync().Result;
-                                checkResponse(result, strResp);
-                            }
-                        }
+                    queryString = BuildQueryString(requestParameters.Parameters) ?? string.Empty;
+                    if (!requestParameters.PassAllParametersInQueryString || queryString == string.Empty)
+                    {
+                        url = requestParameters.UrlPath;
+                    }
+                    else
+                    {
+                        url = $"{requestParameters.UrlPath}?{queryString}";
+                    }
 
-                        break;
-                    case METHOD_GET:
-                        var param = BuildParamStr(getParams);
-                        var url = $"{urlPath}{(string.IsNullOrEmpty(param) ? string.Empty : $"?{param}")}";
-                        using (var result = httpClient.GetAsync(url).Result)
+                    using (var content =
+                        new StringContent(requestParameters.PassAllParametersInQueryString ? string.Empty : queryString,
+                            Encoding.UTF8))
+                    {
+                        using (var result = httpClient.PostAsync(url, content).Result)
                         {
                             strResp = result.Content.ReadAsStringAsync().Result;
                             checkResponse(result, strResp);
                         }
-
-                        break;
+                    }
                 }
-
+                else if (requestParameters.Method == HttpMethod.Get)
+                {
+                    queryString = BuildQueryString(requestParameters.Parameters);
+                    url =
+                        $"{requestParameters.UrlPath}{(string.IsNullOrEmpty(queryString) ? string.Empty : $"?{queryString}")}";
+                    using (var result = httpClient.GetAsync(url).Result)
+                    {
+                        strResp = result.Content.ReadAsStringAsync().Result;
+                        checkResponse(result, strResp);
+                    }
+                }
             }
             catch (EndpointCommunicationException)
             {
@@ -170,11 +188,26 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
             }
         }
 
-        private static string BuildParamStr(Dictionary<string, string> paramDic)
+        private string BuildQueryString(Dictionary<string, string> paramDic)
         {
-            return paramDic?.Any() != true
+            var mainParams = paramDic?.Any() != true
                 ? string.Empty
                 : string.Join("&", paramDic.Select(x => $"{x.Key}={HttpUtility.UrlEncode(x.Value)}"));
+
+            if (!useSignature) return mainParams;
+
+            var queryString = string.Join("&", mainParams,
+                $"timestamp={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+
+            return string.Join("&", queryString, $"signature={Sign(queryString)}");
+        }
+
+        private string Sign(string queryString)
+        {
+            var messageBytes = Encoding.UTF8.GetBytes(queryString);
+            var hash = new HMACSHA256(secretKey);
+            var computedHash = hash.ComputeHash(messageBytes);
+            return BitConverter.ToString(computedHash).Replace("-", "").ToLower();
         }
 
         public void Dispose()
@@ -183,5 +216,48 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
         }
     }
 
+    internal sealed class RequestParameters
+    {
+        /// <summary>
+        /// HTTP-метод
+        /// </summary>
+        public HttpMethod Method { get; }
 
+        /// <summary>
+        /// Путь к ресурсу (без базового адреса эндпоинта)
+        /// </summary>
+        public string UrlPath { get; }
+
+        /// <summary>
+        /// Вес запроса в баллах
+        /// </summary>
+        public int RequestWeight { get; }
+
+        /// <summary>
+        /// Признак того, что высокого приоритета запроса
+        /// </summary>
+        public bool IsHighPriority { get; set; }
+
+        /// <summary>
+        /// Это запрос на работу с ордерами (размещение/удаление/модификация)
+        /// </summary>
+        public bool IsOrderRequest { get; set; }
+
+        /// <summary>
+        /// Передавать все параметры через QueryString URL
+        /// </summary>
+        public bool PassAllParametersInQueryString { get; set; }
+
+        /// <summary>
+        /// Параметры запроса
+        /// </summary>
+        public Dictionary<string, string> Parameters { get; set; }
+
+        public RequestParameters(HttpMethod method, string urlPath, int requestWeight)
+        {
+            Method = method;
+            UrlPath = urlPath;
+            RequestWeight = requestWeight;
+        }
+    }
 }

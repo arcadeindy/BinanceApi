@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Transport;
@@ -30,7 +31,7 @@ namespace PoissonSoft.BinanceApi.MarketData
         }
         private ExchangeInfo LoadExchangeInfo()
         {
-            return client.MakeRequest<ExchangeInfo>(RestClient.METHOD_GET, "exchangeInfo", 1, false, false);
+            return client.MakeRequest<ExchangeInfo>(new RequestParameters(HttpMethod.Get, "exchangeInfo", 1));
         }
 
         public void Dispose()
