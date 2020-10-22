@@ -1,4 +1,4 @@
-﻿namespace PoissonSoft.BinanceApi.UserDataStreams
+﻿namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
 {
     /// <summary>
     /// Is sent any time an account balance has changed and contains the assets that

@@ -1,4 +1,4 @@
-﻿namespace PoissonSoft.BinanceApi.UserDataStreams
+﻿namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
 {
     /// <summary>
     /// If the order is an OCO, an event will be displayed named ListStatus in addition to the executionReport event.

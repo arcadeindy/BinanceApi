@@ -1,4 +1,5 @@
 ﻿using System;
+using PoissonSoft.BinanceApi.Contracts.UserDataStream;
 
 namespace PoissonSoft.BinanceApi.UserDataStreams
 {

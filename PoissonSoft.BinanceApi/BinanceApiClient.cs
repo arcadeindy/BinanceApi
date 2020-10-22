@@ -27,7 +27,7 @@ namespace PoissonSoft.BinanceApi
             this.credentials = credentials;
             Throttler = new Throttler(this);
             
-            spotDataStream = new SpotUserDataStream(this);
+            spotDataStream = new SpotUserDataStream(this, credentials);
             spotDataCollector = new SpotDataCollector(this);
             marketDataApi = new MarketDataApi(this, credentials, logger);
             spotAccountApi = new SpotAccountApi(this, credentials, logger);

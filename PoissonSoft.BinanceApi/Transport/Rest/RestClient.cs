@@ -149,6 +149,21 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
                         checkResponse(result, strResp);
                     }
                 }
+                else if (requestParameters.Method == HttpMethod.Delete)
+                {
+                    queryString = BuildQueryString(requestParameters.Parameters);
+                    url =
+                        $"{requestParameters.UrlPath}{(string.IsNullOrEmpty(queryString) ? string.Empty : $"?{queryString}")}";
+                    using (var result = httpClient.DeleteAsync(url).Result)
+                    {
+                        strResp = result.Content.ReadAsStringAsync().Result;
+                        checkResponse(result, strResp);
+                    }
+                }
+                else
+                {
+                    throw new Exception($"Unsupporded HTTP-method {requestParameters.Method}");
+                }
             }
             catch (EndpointCommunicationException)
             {

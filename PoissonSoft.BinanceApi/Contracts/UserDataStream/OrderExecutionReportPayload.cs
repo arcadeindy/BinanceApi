@@ -1,4 +1,4 @@
-﻿namespace PoissonSoft.BinanceApi.UserDataStreams
+﻿namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
 {
     /// <summary>
     /// Событие, информирующее об изменении ордера
