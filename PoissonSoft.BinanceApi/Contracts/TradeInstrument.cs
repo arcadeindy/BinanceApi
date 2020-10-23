@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Filters;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 
@@ -72,8 +73,8 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// </summary>
         [JsonProperty("orderTypes", 
             ItemConverterType = typeof(StringEnumExConverter), 
-            ItemConverterParameters = new object[]{BinanceOrderType.Unknown})]
-        public BinanceOrderType[] OrderTypes { get; set; }
+            ItemConverterParameters = new object[]{OrderType.Unknown})]
+        public OrderType[] OrderTypes { get; set; }
 
         /// <summary>
         /// "icebergAllowed": true,
@@ -157,10 +158,40 @@ namespace PoissonSoft.BinanceApi.Contracts
         Unknown,
 
         /// <summary>
+        /// PRE_TRADING
+        /// </summary>
+        [EnumMember(Value = "PRE_TRADING")]
+        PreTrading,
+
+        /// <summary>
         /// Торги активны
         /// </summary>
         [EnumMember(Value = "TRADING")]
         Trading,
+        
+        /// <summary>
+        /// POST_TRADING
+        /// </summary>
+        [EnumMember(Value = "POST_TRADING")]
+        PostTrading,
+
+        /// <summary>
+        /// END_OF_DAY
+        /// </summary>
+        [EnumMember(Value = "END_OF_DAY")]
+        EndOfDay,
+
+        /// <summary>
+        /// HALT
+        /// </summary>
+        [EnumMember(Value = "HALT")]
+        Halt,
+
+        /// <summary>
+        /// AUCTION_MATCH
+        /// </summary>
+        [EnumMember(Value = "AUCTION_MATCH")]
+        AuctionMatch,
 
         /// <summary>
         /// Торги приостановлены

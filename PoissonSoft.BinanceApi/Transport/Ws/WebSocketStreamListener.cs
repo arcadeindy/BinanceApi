@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Net.WebSockets;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using NLog;
+using PoissonSoft.BinanceApi.Contracts.Serialization;
 using PoissonSoft.BinanceApi.Utils;
 
 namespace PoissonSoft.BinanceApi.Transport.Ws
 {
     internal sealed class WebSocketStreamListener: IDisposable
     {
-        private readonly Logger logger;
+        private readonly ILogger logger;
         private readonly BinanceApiClientCredentials credentials;
 
         private ClientWebSocket client;
@@ -23,9 +26,10 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
 
         public event EventHandler OnConnected; 
         public event EventHandler<(WebSocketCloseStatus? CloseStatus, string CloseStatusDescription)> OnConnectionClosed;
+        public event EventHandler<string> OnMessage; 
 
 
-        public WebSocketStreamListener(Logger logger, BinanceApiClientCredentials credentials)
+        public WebSocketStreamListener(ILogger logger, BinanceApiClientCredentials credentials)
         {
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
@@ -106,7 +110,7 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
                     try
                     {
                         var msgContent = Encoding.UTF8.GetString(buffer, 0, msg.Count);
-                        await ProcessServerMessage(msgContent);
+                        ProcessServerMessage(msgContent);
                     }
                     catch (Exception e)
                     {
@@ -144,10 +148,9 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
             socketFinishedTcs.SetResult(null);
         }
 
-        private async Task ProcessServerMessage(string msg)
+        private void ProcessServerMessage(string msg)
         {
-            Console.WriteLine(msg);
-            // TODO:
+            OnMessage?.Invoke(this, msg);
         }
 
         public void Dispose()

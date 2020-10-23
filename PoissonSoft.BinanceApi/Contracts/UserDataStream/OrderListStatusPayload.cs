@@ -1,4 +1,6 @@
-﻿namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
+﻿using Newtonsoft.Json;
+
+namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
 {
     /// <summary>
     /// If the order is an OCO, an event will be displayed named ListStatus in addition to the executionReport event.
@@ -6,6 +8,11 @@
     /// </summary>
     public class OrderListStatusPayload
     {
+        /// <summary>
+        /// Тип события
+        /// </summary>
+        [JsonProperty("e")]
+        public string EventType { get; set; }
         // TODO: 
     }
 }

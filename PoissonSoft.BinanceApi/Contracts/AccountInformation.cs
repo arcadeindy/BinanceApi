@@ -10,16 +10,18 @@ namespace PoissonSoft.BinanceApi.Contracts
     public class AccountInformation
     {
         /// <summary>
+        /// Комиссия мейкера в bips (1 bips = 0.01%)
         /// "makerCommission": 15,
         /// </summary>
         [JsonProperty("makerCommission")]
-        public int MakerCommission { get; set; }
+        public decimal MakerCommission { get; set; }
 
         /// <summary>
+        /// Комиссия тейкера в bips (1 bips = 0.01%)
         /// "takerCommission": 15,
         /// </summary>
         [JsonProperty("takerCommission")]
-        public int TakerCommission { get; set; }
+        public decimal TakerCommission { get; set; }
 
         /// <summary>
         /// "buyerCommission": 0,

@@ -94,9 +94,24 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         Unknown,
 
         /// <summary>
+        /// Устанавливается соединение
+        /// </summary>
+        Connecting,
+
+        /// <summary>
         /// Поток активен
         /// </summary>
         Active,
+
+        /// <summary>
+        /// Соединение восстанавливается после обрыва
+        /// </summary>
+        Reconnecting,
+
+        /// <summary>
+        /// Начат процесс остановки соединения
+        /// </summary>
+        Closing,
 
         /// <summary>
         /// Поток закрыт

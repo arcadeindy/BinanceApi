@@ -66,11 +66,13 @@ namespace PoissonSoft.BinanceApi
             marketDataApi?.Dispose();
             spotAccountApi?.Dispose();
 
-            if (spotDataCollector.IsStarted) spotDataCollector.Stop();
+            if (spotDataStream?.Status == UserDataStreamStatus.Active) spotDataStream.Close();
+            spotDataStream?.Dispose();
+
+            if (spotDataCollector?.IsStarted == true) spotDataCollector.Stop();
+            spotDataCollector?.Dispose();
             
             Throttler?.Dispose();
-            
-            // TODO:
         }
     }
 }

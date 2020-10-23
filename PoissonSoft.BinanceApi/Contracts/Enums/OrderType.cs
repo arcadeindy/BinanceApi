@@ -1,15 +1,15 @@
 ﻿using System.Runtime.Serialization;
 
-namespace PoissonSoft.BinanceApi.Contracts
+namespace PoissonSoft.BinanceApi.Contracts.Enums
 {
     /// <summary>
     /// Типы ордеров
     /// https://www.binance.com/en/support/articles/360033779452-Types-of-Order
     /// </summary>
-    public enum BinanceOrderType
+    public enum OrderType
     {
         /// <summary>
-        /// Неизвестный (ошибочный) тип
+        /// Unknown (erroneous) type
         /// </summary>
         Unknown,
 

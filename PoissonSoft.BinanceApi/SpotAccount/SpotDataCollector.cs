@@ -4,7 +4,7 @@ using PoissonSoft.BinanceApi.UserDataStreams;
 
 namespace PoissonSoft.BinanceApi.SpotAccount
 {
-    internal class SpotDataCollector: ISpotDataCollector
+    internal class SpotDataCollector: ISpotDataCollector, IDisposable
     {
         private readonly BinanceApiClient apiClient;
         private readonly object startLock = new object();
@@ -37,5 +37,10 @@ namespace PoissonSoft.BinanceApi.SpotAccount
         public bool IsStarted { get; }
 
         public AccountInformation AccountInformation { get; }
+
+        public void Dispose()
+        {
+            // TODO:
+        }
     }
 }

@@ -110,12 +110,12 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
                 throw new EndpointCommunicationException(msg);
             }
 
-            string strResp = null;
+            string strResp;
             try
             {
                 string queryString;
                 string url;
-                if (requestParameters.Method == HttpMethod.Post)
+                if (requestParameters.Method == HttpMethod.Post || requestParameters.Method == HttpMethod.Put)
                 {
                     queryString = BuildQueryString(requestParameters.Parameters) ?? string.Empty;
                     if (!requestParameters.PassAllParametersInQueryString || queryString == string.Empty)
@@ -131,30 +131,23 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
                         new StringContent(requestParameters.PassAllParametersInQueryString ? string.Empty : queryString,
                             Encoding.UTF8))
                     {
-                        using (var result = httpClient.PostAsync(url, content).Result)
+                        using (var result = requestParameters.Method == HttpMethod.Post 
+                            ? httpClient.PostAsync(url, content).Result
+                            : httpClient.PutAsync(url, content).Result)
                         {
                             strResp = result.Content.ReadAsStringAsync().Result;
                             checkResponse(result, strResp);
                         }
                     }
                 }
-                else if (requestParameters.Method == HttpMethod.Get)
+                else if (requestParameters.Method == HttpMethod.Get || requestParameters.Method == HttpMethod.Delete)
                 {
                     queryString = BuildQueryString(requestParameters.Parameters);
                     url =
                         $"{requestParameters.UrlPath}{(string.IsNullOrEmpty(queryString) ? string.Empty : $"?{queryString}")}";
-                    using (var result = httpClient.GetAsync(url).Result)
-                    {
-                        strResp = result.Content.ReadAsStringAsync().Result;
-                        checkResponse(result, strResp);
-                    }
-                }
-                else if (requestParameters.Method == HttpMethod.Delete)
-                {
-                    queryString = BuildQueryString(requestParameters.Parameters);
-                    url =
-                        $"{requestParameters.UrlPath}{(string.IsNullOrEmpty(queryString) ? string.Empty : $"?{queryString}")}";
-                    using (var result = httpClient.DeleteAsync(url).Result)
+                    using (var result = requestParameters.Method == HttpMethod.Get
+                        ? httpClient.GetAsync(url).Result
+                        : httpClient.DeleteAsync(url).Result)
                     {
                         strResp = result.Content.ReadAsStringAsync().Result;
                         checkResponse(result, strResp);

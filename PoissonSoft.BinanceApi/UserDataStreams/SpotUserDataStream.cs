@@ -12,12 +12,12 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
     /// <summary>
     /// User Data Stream для спотового аккаунта
     /// </summary>
-    public class SpotUserDataStream : UserDataStream, IDisposable
+    public class SpotUserDataStream : UserDataStream
     {
         private readonly RestClient client;
 
         /// <inheritdoc />
-        public SpotUserDataStream(BinanceApiClient apiClient, BinanceApiClientCredentials credentials) : base(apiClient.Logger)
+        public SpotUserDataStream(BinanceApiClient apiClient, BinanceApiClientCredentials credentials) : base(apiClient.Logger, credentials)
         {
             StreamType = UserDataStreamType.Spot;
 
@@ -42,7 +42,15 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         /// <inheritdoc />
         protected override void KeepAliveListenKey(string key)
         {
-            throw new NotImplementedException();
+            client.MakeRequest<EmptyResponse>(
+                new RequestParameters(HttpMethod.Put, "userDataStream", 1)
+                {
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["listenKey"] = key
+                    },
+                    PassAllParametersInQueryString = true
+                });
         }
 
         /// <inheritdoc />
@@ -58,10 +66,21 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
                 });
         }
 
+        private bool disposed;
+
         /// <inheritdoc />
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            client?.Dispose();
+            if (disposed) return;
+
+            if (disposing)
+            {
+                client?.Dispose();
+            }
+
+            disposed = true;
+
+            base.Dispose(disposing);
         }
     }
 }
