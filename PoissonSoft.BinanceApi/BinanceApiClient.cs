@@ -33,6 +33,11 @@ namespace PoissonSoft.BinanceApi
             spotAccountApi = new SpotAccountApi(this, credentials, logger);
         }
 
+        /// <summary>
+        /// В режиме отладке логгируется больше событий
+        /// </summary>
+        public bool IsDebug { get; set; } = false;
+
         internal Throttler Throttler { get; }
 
         /// <summary>

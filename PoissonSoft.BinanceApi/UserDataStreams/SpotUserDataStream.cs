@@ -17,7 +17,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         private readonly RestClient client;
 
         /// <inheritdoc />
-        public SpotUserDataStream(BinanceApiClient apiClient, BinanceApiClientCredentials credentials) : base(apiClient.Logger, credentials)
+        public SpotUserDataStream(BinanceApiClient apiClient, BinanceApiClientCredentials credentials) : base(apiClient, credentials)
         {
             StreamType = UserDataStreamType.Spot;
 

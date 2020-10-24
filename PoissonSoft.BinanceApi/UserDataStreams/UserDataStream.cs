@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Newtonsoft.Json;
-using NLog;
+using Newtonsoft.Json.Serialization;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
 using PoissonSoft.BinanceApi.Transport.Ws;
@@ -20,7 +20,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
     {
         private const string WS_BASE_ENDPOINT = "wss://stream.binance.com:9443";
 
-        private readonly ILogger logger;
+        private readonly BinanceApiClient apiClient;
         private readonly BinanceApiClientCredentials credentials;
         private readonly string userFriendlyName = nameof(UserDataStream);
 
@@ -33,16 +33,18 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         /// <summary>
         /// Создание экземпляра
         /// </summary>
-        protected UserDataStream(ILogger logger, BinanceApiClientCredentials credentials)
+        protected UserDataStream(BinanceApiClient apiClient, BinanceApiClientCredentials credentials)
         {
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
             this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             Status = UserDataStreamStatus.Closed;
+
 
             serializerSettings = new JsonSerializerSettings
             {
                 Context = new StreamingContext(StreamingContextStates.All,
-                    new SerializationContext { Logger = logger })
+                    new SerializationContext { Logger = apiClient.Logger }),
+                ContractResolver = new CaseSensitiveContractResolver(),
             };
         }
 
@@ -83,7 +85,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             }
             catch (Exception e)
             {
-                logger.Error($"{userFriendlyName}. Can not create Listen Key. Exception:\n{e}");
+                apiClient.Logger.Error($"{userFriendlyName}. Can not create Listen Key. Exception:\n{e}");
                 Status = UserDataStreamStatus.Closed;
                 return;
             }
@@ -92,7 +94,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             pingTimer.Elapsed += OnPingTimer;
             pingTimer.Enabled = true;
 
-            streamListener = new WebSocketStreamListener(logger, credentials);
+            streamListener = new WebSocketStreamListener(apiClient.Logger, credentials);
             streamListener.OnConnected += OnConnectToStream;
             streamListener.OnConnectionClosed += OnDisconnect;
             streamListener.OnMessage += OnStreamMessage;
@@ -119,9 +121,10 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             }
             catch (Exception e)
             {
-                logger.Error($"{userFriendlyName}. Exception when closing Listen Key:\n{e}");
+                apiClient.Logger.Error($"{userFriendlyName}. Exception when closing Listen Key:\n{e}");
             }
 
+            apiClient.Logger.Info($"{userFriendlyName}. Connection closed");
             Status = UserDataStreamStatus.Closed;
         }
 
@@ -133,7 +136,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             }
             catch (Exception ex)
             {
-                logger.Error($"{userFriendlyName}. Exception when send ping to Listen Key:\n{ex}");
+                apiClient.Logger.Error($"{userFriendlyName}. Exception when send ping to Listen Key:\n{ex}");
             }
         }
 
@@ -159,13 +162,13 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         {
             Status = UserDataStreamStatus.Active;
             reconnectTimeout = TimeSpan.Zero;
-            logger.Error($"{userFriendlyName}. Successfully connected!");
+            apiClient.Logger.Info($"{userFriendlyName}. Successfully connected!");
         }
 
         private void OnDisconnect(object sender, (WebSocketCloseStatus? CloseStatus, string CloseStatusDescription) e)
         {
             if (reconnectTimeout.TotalSeconds < 15) reconnectTimeout += TimeSpan.FromSeconds(1);
-            logger.Error($"{userFriendlyName}. WebSocket was disconnected. Try reconnect again after {reconnectTimeout}.");
+            apiClient.Logger.Error($"{userFriendlyName}. WebSocket was disconnected. Try reconnect again after {reconnectTimeout}.");
             Task.Run(() =>
             {
                 Task.Delay(reconnectTimeout);
@@ -186,7 +189,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
                 catch (Exception e)
                 {
                     if (reconnectTimeout.TotalSeconds < 15) reconnectTimeout += TimeSpan.FromSeconds(1);
-                    logger.Error($"{userFriendlyName}. WebSocket connection failed. Try again after {reconnectTimeout}. Exception:\n{e}");
+                    apiClient.Logger.Error($"{userFriendlyName}. WebSocket connection failed. Try again after {reconnectTimeout}. Exception:\n{e}");
                     Thread.Sleep(reconnectTimeout);
                 }
             }
@@ -206,7 +209,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
                 }
                 catch (Exception e)
                 {
-                    logger.Error($"{userFriendlyName}. Exception when processing payload.\n" +
+                    apiClient.Logger.Error($"{userFriendlyName}. Exception when processing payload.\n" +
                                  $"Message: {message}\n" +
                                  $"Exception: {e}");
                 }
@@ -215,6 +218,11 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
 
         private void ProcessStreamMessage(string message)
         {
+            if (apiClient.IsDebug)
+            {
+                apiClient.Logger.Debug($"{userFriendlyName}. New payload received:\n{message}");
+            }
+
             var baseMsg = JsonConvert.DeserializeObject<PayloadBase>(message, serializerSettings);
             switch (baseMsg.EventType)
             {
@@ -248,7 +256,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
                     break;
 
                 default:
-                    logger.Error($"{userFriendlyName}. Unknown payload Event Type '{baseMsg.EventType}'\n" +
+                    apiClient.Logger.Error($"{userFriendlyName}. Unknown payload Event Type '{baseMsg.EventType}'\n" +
                                  $"Message: {message}");
                     break;
 

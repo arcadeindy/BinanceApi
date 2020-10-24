@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Exceptions;
 using PoissonSoft.BinanceApi.Utils;
 

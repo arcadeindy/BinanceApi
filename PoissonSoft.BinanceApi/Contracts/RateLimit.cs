@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 
 namespace PoissonSoft.BinanceApi.Contracts
@@ -50,56 +50,5 @@ namespace PoissonSoft.BinanceApi.Contracts
                 Limit = Limit
             };
         }
-    }
-
-    /// <summary>
-    /// Тип лимита
-    /// </summary>
-    public enum RateLimitType
-    {
-        /// <summary>
-        /// Неизвестный (ошибочный) тип
-        /// </summary>
-        Unknown,
-
-        /// <summary>
-        /// Лимит на суммарный вес запросов с одного IP
-        /// </summary>
-        [EnumMember(Value = "REQUEST_WEIGHT")]
-        RequestWeight,
-
-        /// <summary>
-        /// Лимит на количество ордеров
-        /// </summary>
-        [EnumMember(Value = "ORDERS")]
-        Orders,
-    }
-
-    /// <summary>
-    /// Единицы измерения временного интервала для лимита
-    /// </summary>
-    public enum RateLimitUnit
-    {
-        /// <summary>
-        /// Неизвестный (ошибочный) тип
-        /// </summary>
-        Unknown = 0,
-
-        /// <summary/>
-        [EnumMember(Value = "SECOND")]
-        Second = 1,
-
-        /// <summary/>
-        [EnumMember(Value = "MINUTE")]
-        Minute = Second * 60,
-
-        /// <summary/>
-        [EnumMember(Value = "HOUR")]
-        Hour = Minute * 60,
-
-        /// <summary/>
-        [EnumMember(Value = "DAY")]
-        Day = Hour * 24,
-
     }
 }
