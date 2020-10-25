@@ -68,14 +68,15 @@ namespace PoissonSoft.BinanceApi
         /// <inheritdoc />
         public void Dispose()
         {
-            marketDataApi?.Dispose();
-            spotAccountApi?.Dispose();
+            
+            if (spotDataCollector?.IsStarted == true) spotDataCollector.Stop();
+            spotDataCollector?.Dispose();
 
             if (spotDataStream?.Status == UserDataStreamStatus.Active) spotDataStream.Close();
             spotDataStream?.Dispose();
 
-            if (spotDataCollector?.IsStarted == true) spotDataCollector.Stop();
-            spotDataCollector?.Dispose();
+            marketDataApi?.Dispose();
+            spotAccountApi?.Dispose();
             
             Throttler?.Dispose();
         }

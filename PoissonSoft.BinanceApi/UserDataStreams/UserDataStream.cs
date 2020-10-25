@@ -104,16 +104,32 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         /// <inheritdoc />
         public void Close()
         {
-            streamListener.OnConnected -= OnConnectToStream;
-            streamListener.OnConnectionClosed -= OnDisconnect;
-            streamListener.OnMessage -= OnStreamMessage;
-            streamListener.Dispose();
-            streamListener = null;
+            if (Status == UserDataStreamStatus.Closed) return;
 
-            pingTimer.Enabled = false;
-            pingTimer.Elapsed -= OnPingTimer;
-            pingTimer.Dispose();
-            pingTimer = null;
+            if (streamListener != null)
+            {
+                try
+                {
+                    streamListener.OnConnected -= OnConnectToStream;
+                    streamListener.OnConnectionClosed -= OnDisconnect;
+                    streamListener.OnMessage -= OnStreamMessage;
+                }
+                catch{ /*ignore*/ }
+                streamListener.Dispose();
+                streamListener = null;
+            }
+
+            if (pingTimer != null)
+            {
+                pingTimer.Enabled = false;
+                try
+                {
+                    pingTimer.Elapsed -= OnPingTimer;
+                }
+                catch { /*ignore*/ }
+                pingTimer.Dispose();
+                pingTimer = null;
+            }
 
             try
             {

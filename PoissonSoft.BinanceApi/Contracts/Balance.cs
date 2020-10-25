@@ -1,11 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using System;
+using Newtonsoft.Json;
 
 namespace PoissonSoft.BinanceApi.Contracts
 {
     /// <summary>
     /// Баланс конкретной монеты
     /// </summary>
-    public class Balance
+    public class Balance: ICloneable
     {
         /// <summary>
         /// "asset": "BTC",
@@ -24,5 +25,16 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// </summary>
         [JsonProperty("locked")]
         public decimal Locked { get; set; }
+
+        /// <inheritdoc />
+        public object Clone()
+        {
+            return new Balance
+            {
+                Asset = Asset,
+                Free = Free,
+                Locked = Locked,
+            };
+        }
     }
 }

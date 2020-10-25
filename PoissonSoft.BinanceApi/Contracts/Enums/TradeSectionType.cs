@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace PoissonSoft.BinanceApi.Contracts
+namespace PoissonSoft.BinanceApi.Contracts.Enums
 {
     /// <summary>
     /// Тип торговой секции

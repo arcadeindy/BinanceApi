@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 
 namespace PoissonSoft.BinanceApi.Contracts
@@ -7,7 +10,7 @@ namespace PoissonSoft.BinanceApi.Contracts
     /// <summary>
     /// Информация об аккаунте
     /// </summary>
-    public class AccountInformation
+    public class AccountInformation : ICloneable
     {
         /// <summary>
         /// Комиссия мейкера в bips (1 bips = 0.01%)
@@ -63,7 +66,8 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// "accountType": "SPOT",
         /// </summary>
         [JsonProperty("accountType")]
-        public string AccountType { get; set; }
+        [JsonConverter(typeof(StringEnumExConverter), TradeSectionType.Unknown)]
+        public TradeSectionType AccountType { get; set; }
 
         /// <summary>
         /// Балансы
@@ -78,5 +82,24 @@ namespace PoissonSoft.BinanceApi.Contracts
             ItemConverterType = typeof(StringEnumExConverter),
             ItemConverterParameters = new object[] { TradeSectionType.Unknown })]
         public TradeSectionType[] Permissions { get; set; }
+
+        /// <inheritdoc />
+        public object Clone()
+        {
+            return new AccountInformation
+            {
+                MakerCommission = MakerCommission,
+                TakerCommission = TakerCommission,
+                BuyerCommission = BuyerCommission,
+                SellerCommission = SellerCommission,
+                CanTrade = CanTrade,
+                CanWithdraw = CanWithdraw,
+                CanDeposit = CanDeposit,
+                UpdateTimestamp = UpdateTimestamp,
+                AccountType = AccountType,
+                Balances = Balances?.Select(x => (Balance)x.Clone()).ToList(),
+                Permissions = Permissions?.ToArray()
+            };
+        }
     }
 }

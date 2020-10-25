@@ -73,6 +73,9 @@ namespace BinanceApi.Example
             {
                 [ConsoleKey.B] = "Start SpotDataCollector",
                 [ConsoleKey.E] = "Stop SpotDataCollector",
+
+                [ConsoleKey.A] = "Account Information",
+
                 [ConsoleKey.Escape] = "Go back",
             };
 
@@ -94,6 +97,15 @@ namespace BinanceApi.Example
                         Console.WriteLine($"SpotDataCollector.IsStarted={apiClient.SpotDataCollector.IsStarted}");
                     });
                     return true;
+
+                case ConsoleKey.A:
+                    SafeCall(() =>
+                    {
+                        var ai = apiClient.SpotDataCollector.AccountInformation;
+                        Console.WriteLine(JsonConvert.SerializeObject(ai, Formatting.Indented));
+                    });
+                    return true;
+
                 case ConsoleKey.Escape:
                     return false;
                 default:
