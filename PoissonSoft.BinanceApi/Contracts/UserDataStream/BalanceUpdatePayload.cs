@@ -1,4 +1,32 @@
-﻿using Newtonsoft.Json;
+﻿/* При вводе/выводе прилетает сразу два снапшота AccountUpdatePayload и BalanceUpdatePayload
+Поэтому отслеживать изменения балансов целесообразно исключительно по снапшотам AccountUpdatePayload
+
+{
+  "e": "outboundAccountPosition",
+  "E": 1603617640389,
+  "u": 1603617640387,
+  "B": [
+    {
+      "a": "DOGE",
+      "f": 19900.00000000,
+      "l": 0.00000000
+    }
+  ]
+}
+
+{
+  "e": "balanceUpdate",
+  "E": 1603617640389,
+  "a": "DOGE",
+  "d": -100.00000000,
+  "T": 1603617640387
+}
+
+ */
+
+
+
+using Newtonsoft.Json;
 
 namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
 {

@@ -31,6 +31,12 @@ namespace PoissonSoft.BinanceApi.Contracts.Enums
         Filled,
 
         /// <summary>
+        /// The order has been canceled by the user.
+        /// </summary>
+        [EnumMember(Value = "CANCELED")]
+        Canceled,
+
+        /// <summary>
         /// Currently unused
         /// </summary>
         [EnumMember(Value = "PENDING_CANCEL")]
