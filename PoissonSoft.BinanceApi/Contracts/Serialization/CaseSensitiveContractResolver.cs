@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Newtonsoft.Json.Serialization;
 
 namespace PoissonSoft.BinanceApi.Contracts.Serialization
@@ -17,46 +16,33 @@ namespace PoissonSoft.BinanceApi.Contracts.Serialization
             var contract = base.ResolveContract(type);
             if (contract is JsonObjectContract objectContract)
             {
-                var pi = typeof(JsonObjectContract).GetProperty("Properties");
-                var backingField = pi?.DeclaringType?.GetField($"<{pi.Name}>k__BackingField",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                if (backingField != null)
-                {
-                    backingField.SetValue(objectContract, new CaseSensitiveJsonPropertyCollection(type, objectContract.Properties));
-                }
+                AdjustCollection(objectContract.Properties);
+
+                //var pi = typeof(JsonObjectContract).GetProperty("Properties");
+                //var backingField = pi?.DeclaringType?.GetField($"<{pi.Name}>k__BackingField",
+                //    BindingFlags.Instance | BindingFlags.NonPublic);
+                //if (backingField != null)
+                //{
+                //    backingField.SetValue(objectContract, new CaseSensitiveJsonPropertyCollection(type, objectContract.Properties));
+                //}
             }
 
             return contract;
         }
-    }
 
-    /// <summary>
-    /// Реализация PropertyCollection, чувствительной к регистру имён полей
-    /// </summary>
-    public class CaseSensitiveJsonPropertyCollection: JsonPropertyCollection
-    {
-        /// <inheritdoc />
-        public CaseSensitiveJsonPropertyCollection(Type type) : base(type) { }
-
-        /// <summary>
-        /// Конструктор, создающий коллекцию из экземпляра базового типа
-        /// </summary>
-        /// <param name="type"></param>
-        /// <param name="baseCollection"></param>
-        public CaseSensitiveJsonPropertyCollection(Type type, JsonPropertyCollection baseCollection): base(type)
+        private static void AdjustCollection(JsonPropertyCollection collection)
         {
-            var usedNames = new HashSet<string>(baseCollection.Count);
-            foreach (var item in baseCollection)
+            var usedNames = new HashSet<string>(collection.Count);
+            foreach (var item in collection)
             {
-                Add(item);
                 usedNames.Add(item.PropertyName);
             }
 
             void tryAddCaseDuplicate(string n)
             {
-                if (!usedNames.Contains(n))
+                if (!usedNames.Contains(n) && collection.GetProperty(n, StringComparison.Ordinal) == null)
                 {
-                    Add(new JsonProperty
+                    collection.Add(new JsonProperty
                     {
                         PropertyName = n,
                         Ignored = true
@@ -69,13 +55,6 @@ namespace PoissonSoft.BinanceApi.Contracts.Serialization
                 tryAddCaseDuplicate(name.ToLowerInvariant());
                 tryAddCaseDuplicate(name.ToUpperInvariant());
             }
-
-        }
-
-        /// <summary/>
-        public new JsonProperty GetClosestMatchProperty(string propertyName)
-        {
-            return GetProperty(propertyName, StringComparison.Ordinal);
         }
     }
 }
