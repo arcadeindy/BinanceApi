@@ -1,6 +1,7 @@
 ﻿using System;
 using NLog;
 using PoissonSoft.BinanceApi.MarketData;
+using PoissonSoft.BinanceApi.MarketDataStreams;
 using PoissonSoft.BinanceApi.SpotAccount;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.UserDataStreams;
@@ -31,6 +32,8 @@ namespace PoissonSoft.BinanceApi
             spotDataCollector = new SpotDataCollector(this);
             marketDataApi = new MarketDataApi(this, credentials, logger);
             spotAccountApi = new SpotAccountApi(this, credentials, logger);
+
+            marketStreamsManager = new MarketStreamsManager(this, credentials);
         }
 
         /// <summary>
@@ -45,6 +48,12 @@ namespace PoissonSoft.BinanceApi
         /// </summary>
         public IMarketDataApi MarketDataApi => marketDataApi;
         private readonly MarketDataApi marketDataApi;
+
+        /// <summary>
+        /// Менеджер подписок на рыночные данные
+        /// </summary>
+        public IMarketStreamsManager MarketStreamsManager => marketStreamsManager;
+        private readonly MarketStreamsManager marketStreamsManager;
 
         /// <summary>
         /// API спотового аккаунта
@@ -74,6 +83,8 @@ namespace PoissonSoft.BinanceApi
 
             if (spotDataStream?.Status == UserDataStreamStatus.Active) spotDataStream.Close();
             spotDataStream?.Dispose();
+
+            marketStreamsManager?.Dispose();
 
             marketDataApi?.Dispose();
             spotAccountApi?.Dispose();
