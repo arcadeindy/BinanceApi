@@ -1,5 +1,6 @@
 ﻿using System;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
+using PoissonSoft.BinanceApi.Transport;
 
 namespace PoissonSoft.BinanceApi.UserDataStreams
 {
@@ -22,7 +23,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         /// <summary>
         /// Текущее состояние потока
         /// </summary>
-        UserDataStreamStatus Status { get; }
+        DataStreamStatus Status { get; }
 
         /// <summary>
         /// Событие обновления балансов аккаунта
@@ -81,42 +82,5 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         /// Маржинальный аккаунт для отдельного инструмента
         /// </summary>
         IsolatedMargin
-    }
-
-    /// <summary>
-    /// Текущее состояние User Data Stream
-    /// </summary>
-    public enum UserDataStreamStatus
-    {
-        /// <summary>
-        /// Неизвестное состояние (ошибка)
-        /// </summary>
-        Unknown,
-
-        /// <summary>
-        /// Устанавливается соединение
-        /// </summary>
-        Connecting,
-
-        /// <summary>
-        /// Поток активен
-        /// </summary>
-        Active,
-
-        /// <summary>
-        /// Соединение восстанавливается после обрыва
-        /// </summary>
-        Reconnecting,
-
-        /// <summary>
-        /// Начат процесс остановки соединения
-        /// </summary>
-        Closing,
-
-        /// <summary>
-        /// Поток закрыт
-        /// </summary>
-        Closed,
-
     }
 }

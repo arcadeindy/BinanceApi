@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
+using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Ws;
 using Timer = System.Timers.Timer;
 
@@ -37,7 +38,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         {
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
             this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-            Status = UserDataStreamStatus.Closed;
+            Status = DataStreamStatus.Closed;
 
 
             serializerSettings = new JsonSerializerSettings
@@ -56,7 +57,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         public string Symbol { get; protected set; }
 
         /// <inheritdoc />
-        public UserDataStreamStatus Status { get; protected set; }
+        public DataStreamStatus Status { get; protected set; }
 
         /// <inheritdoc />
         public event EventHandler<AccountUpdatePayload> OnAccountUpdate;
@@ -76,8 +77,8 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
 
         public void Open()
         {
-            if (Status != UserDataStreamStatus.Closed) return;
-            Status = UserDataStreamStatus.Connecting;
+            if (Status != DataStreamStatus.Closed) return;
+            Status = DataStreamStatus.Connecting;
 
             try
             {
@@ -86,7 +87,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             catch (Exception e)
             {
                 apiClient.Logger.Error($"{userFriendlyName}. Can not create Listen Key. Exception:\n{e}");
-                Status = UserDataStreamStatus.Closed;
+                Status = DataStreamStatus.Closed;
                 return;
             }
 
@@ -104,7 +105,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         /// <inheritdoc />
         public void Close()
         {
-            if (Status == UserDataStreamStatus.Closed) return;
+            if (Status == DataStreamStatus.Closed) return;
 
             if (streamListener != null)
             {
@@ -141,7 +142,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             }
 
             apiClient.Logger.Info($"{userFriendlyName}. Connection closed");
-            Status = UserDataStreamStatus.Closed;
+            Status = DataStreamStatus.Closed;
         }
 
         private void OnPingTimer(object sender, ElapsedEventArgs e)
@@ -176,7 +177,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
 
         private void OnConnectToStream(object sender, EventArgs e)
         {
-            Status = UserDataStreamStatus.Active;
+            Status = DataStreamStatus.Active;
             reconnectTimeout = TimeSpan.Zero;
             apiClient.Logger.Info($"{userFriendlyName}. Successfully connected!");
         }
@@ -240,7 +241,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             }
 
             var baseMsg = JsonConvert.DeserializeObject<PayloadBase>(message, serializerSettings);
-            switch (baseMsg.EventType)
+            switch (baseMsg?.EventType)
             {
                 // outboundAccountPosition is sent any time an account balance has changed and contains the assets
                 // that were possibly changed by the event that generated the balance change.
@@ -272,7 +273,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
                     break;
 
                 default:
-                    apiClient.Logger.Error($"{userFriendlyName}. Unknown payload Event Type '{baseMsg.EventType}'\n" +
+                    apiClient.Logger.Error($"{userFriendlyName}. Unknown payload Event Type '{baseMsg?.EventType}'\n" +
                                  $"Message: {message}");
                     break;
 

@@ -32,10 +32,11 @@ namespace BinanceApi.Example
                 [ConsoleKey.A] = "Wallet API",
 
                 [ConsoleKey.B] = "Market Data API",
+                [ConsoleKey.C] = "Market Data Streams",
 
-                [ConsoleKey.C] = "Spot Account API",
-                [ConsoleKey.D] = "Spot Data Stream",
-                [ConsoleKey.E] = "Spot Data Collector",
+                [ConsoleKey.D] = "Spot Account API",
+                [ConsoleKey.E] = "Spot Data Stream",
+                [ConsoleKey.F] = "Spot Data Collector",
 
                 [ConsoleKey.Escape] = "Go back (exit)",
             };
@@ -54,14 +55,18 @@ namespace BinanceApi.Example
                     return true;
 
                 case ConsoleKey.C:
-                    while (ShowSpotAccountApiPage()) { }
+                    while (ShowMarketDataStreamsPage()) { }
                     return true;
 
                 case ConsoleKey.D:
-                    while (ShowSpotDataStreamPage()) { }
+                    while (ShowSpotAccountApiPage()) { }
                     return true;
 
                 case ConsoleKey.E:
+                    while (ShowSpotDataStreamPage()) { }
+                    return true;
+
+                case ConsoleKey.F:
                     while (ShowSpotDataCollectorPage()) { }
                     return true;
 

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
+using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.UserDataStreams;
 
 namespace PoissonSoft.BinanceApi.SpotAccount
@@ -94,9 +95,9 @@ namespace PoissonSoft.BinanceApi.SpotAccount
             var nextProblemInform = DateTimeOffset.UtcNow.AddMinutes(1);
             while (true)
             {
-                if (apiClient.SpotDataStream.Status == UserDataStreamStatus.Active) break;
+                if (apiClient.SpotDataStream.Status == DataStreamStatus.Active) break;
 
-                if (apiClient.SpotDataStream.Status == UserDataStreamStatus.Closed)
+                if (apiClient.SpotDataStream.Status == DataStreamStatus.Closed)
                 {
                     apiClient.SpotDataStream.Open();
                     timeout = TimeSpan.FromSeconds(1);

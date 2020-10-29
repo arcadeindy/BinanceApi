@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using PoissonSoft.BinanceApi.Contracts.MarketDataStream;
+using PoissonSoft.BinanceApi.Transport;
 
 namespace PoissonSoft.BinanceApi.MarketDataStreams
 {
@@ -10,6 +11,11 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
     /// </summary>
     public interface IMarketStreamsManager
     {
+        /// <summary>
+        /// Состояние подключения к WebSocket
+        /// </summary>
+        DataStreamStatus WsConnectionStatus { get; }
+
         /// <summary>
         /// Подписка на верхние <paramref name="levelsCount"/> уровней стакана
         /// </summary>
@@ -29,6 +35,11 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
         /// <param name="subscriptionId"></param>
         /// <returns></returns>
         bool Unsubscribe(long subscriptionId);
+
+        /// <summary>
+        /// Unsubscribe all subscriptions
+        /// </summary>
+        void UnsubscribeAll();
 
     }
 }
