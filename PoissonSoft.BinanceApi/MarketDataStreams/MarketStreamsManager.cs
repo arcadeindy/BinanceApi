@@ -85,6 +85,18 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
         {
             if (WsConnectionStatus == DataStreamStatus.Closed) return;
 
+            UnsubscribeAll();
+
+            WsConnectionStatus = DataStreamStatus.Closing;
+            try
+            {
+                streamListener?.Close();
+            }
+            catch (Exception e)
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. Exception when closing Websocket connection:\n{e}");
+            }
+
             apiClient.Logger.Info($"{userFriendlyName}. Websocket connection closed");
             WsConnectionStatus = DataStreamStatus.Closed;
         }
@@ -99,7 +111,8 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         private void OnDisconnect(object sender, (WebSocketCloseStatus? CloseStatus, string CloseStatusDescription) e)
         {
-            if (disposed) return;
+            if (disposed || WsConnectionStatus == DataStreamStatus.Closing) return;
+            WsConnectionStatus = DataStreamStatus.Reconnecting;
             if (reconnectTimeout.TotalSeconds < 15) reconnectTimeout += TimeSpan.FromSeconds(1);
             apiClient.Logger.Error($"{userFriendlyName}. WebSocket was disconnected. Try reconnect again after {reconnectTimeout}.");
             Task.Run(() =>
@@ -174,6 +187,7 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             {
                 if (streamListener != null)
                 {
+                    Close();
                     streamListener.OnConnected -= OnConnectToWs;
                     streamListener.OnConnectionClosed -= OnDisconnect;
                     streamListener.OnMessage -= OnStreamMessage;

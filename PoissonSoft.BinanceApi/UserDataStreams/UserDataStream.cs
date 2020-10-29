@@ -107,6 +107,8 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         {
             if (Status == DataStreamStatus.Closed) return;
 
+            Status = DataStreamStatus.Closing;
+
             if (streamListener != null)
             {
                 try
@@ -184,6 +186,8 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
 
         private void OnDisconnect(object sender, (WebSocketCloseStatus? CloseStatus, string CloseStatusDescription) e)
         {
+            if (disposed || Status == DataStreamStatus.Closing) return;
+            Status = DataStreamStatus.Reconnecting;
             if (reconnectTimeout.TotalSeconds < 15) reconnectTimeout += TimeSpan.FromSeconds(1);
             apiClient.Logger.Error($"{userFriendlyName}. WebSocket was disconnected. Try reconnect again after {reconnectTimeout}.");
             Task.Run(() =>
