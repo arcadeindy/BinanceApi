@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Net.WebSockets;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using NLog;
-using PoissonSoft.BinanceApi.Contracts.Serialization;
 using PoissonSoft.BinanceApi.Utils;
 
 namespace PoissonSoft.BinanceApi.Transport.Ws
@@ -146,6 +143,12 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
             OnConnectionClosed?.Invoke(this, (client.CloseStatus, client.CloseStatusDescription));
 
             socketFinishedTcs.SetResult(null);
+        }
+
+        public void SendMessage(string msg)
+        {
+            var data = new ArraySegment<byte>(Encoding.UTF8.GetBytes(msg));
+            client.SendAsync(data, WebSocketMessageType.Text, true, CancellationToken.None);
         }
 
         private void ProcessServerMessage(string msg)

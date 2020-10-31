@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,8 +19,8 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
         private readonly BinanceApiClientCredentials credentials;
         private readonly WebSocketStreamListener streamListener;
 
-        private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, SubscriptionWrap>> subscriptions =
-            new ConcurrentDictionary<string, ConcurrentDictionary<int, SubscriptionWrap>>();
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<long, SubscriptionWrap>> subscriptions =
+            new ConcurrentDictionary<string, ConcurrentDictionary<long, SubscriptionWrap>>();
 
         private readonly string userFriendlyName = nameof(MarketStreamsManager);
         private TimeSpan reconnectTimeout = TimeSpan.Zero;
@@ -40,8 +42,50 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         public SubscriptionInfo SubscribePartialBookDepth(string symbol, int levelsCount, int updateSpeedMs, Action<PartialBookDepthPayload> callbackAction)
         {
-            // TODO:
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
+            if (callbackAction == null) throw new ArgumentNullException(nameof(callbackAction));
+
+            if (apiClient.MarketDataApi.GetExchangeInfo()?.Symbols.FirstOrDefault(x => x.Symbol == symbol) == null)
+            {
+                throw new Exception($"Unknown symbol '{symbol}'");
+            }
+
+            if (levelsCount <= 7) levelsCount = 5;
+            else if (levelsCount <= 15) levelsCount = 10;
+            else levelsCount = 20;
+
+            updateSpeedMs = updateSpeedMs <= 550 ? 100 : 1000;
+
+            var subscriptionInfo = new SubscriptionInfo
+            {
+                Id = GenerateUniqueId(),
+                StreamType = DataStreamType.PartialBookDepthStreams,
+                BinanceStreamName = $"{symbol.ToLowerInvariant()}@depth{levelsCount}{(updateSpeedMs == 1000 ? string.Empty : "100ms")}",
+                Symbol = symbol,
+                Parameters = new Dictionary<string, string>
+                {
+                    ["symbol"] = symbol,
+                    ["levels"] = levelsCount.ToString(),
+                    ["updateSpeed"] = $"{updateSpeedMs}ms"
+                }
+            };
+
+            var subscriptionWrap = new SubscriptionWrap
+            {
+                Info = subscriptionInfo,
+                CallbackAction = callbackAction
+            };
+
+            var needSubscribeToStream = AddSubscription(subscriptionWrap);
+
+            if (needSubscribeToStream)
+            {
+                var resp = SubscribeToStream(subscriptionInfo.BinanceStreamName);
+                if (!resp.Success)
+                    throw new Exception($"Stream subscription error: {resp.ErrorDescription}");
+            }
+
+            return subscriptionInfo;
         }
 
         public bool Unsubscribe(long subscriptionId)
@@ -58,6 +102,8 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         #region [Subscription management]
 
+        private long lastId;
+        
         private class SubscriptionWrap
         {
             public SubscriptionInfo Info { get; set; }
@@ -65,9 +111,77 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             public object CallbackAction { get; set; }
         }
 
+        private long GenerateUniqueId()
+        {
+            return Interlocked.Increment(ref lastId);
+        }
+
+        private bool AddSubscription(SubscriptionWrap sw)
+        {
+            var needSubscribeToChannel = false;
+            if (!subscriptions.TryGetValue(sw.Info.BinanceStreamName, out var streamSubscriptions))
+            {
+                streamSubscriptions = new ConcurrentDictionary<long, SubscriptionWrap>();
+                if (subscriptions.TryAdd(sw.Info.BinanceStreamName, streamSubscriptions))
+                {
+                    needSubscribeToChannel = true;
+                }
+                else
+                {
+                    subscriptions.TryGetValue(sw.Info.BinanceStreamName, out streamSubscriptions);
+                }
+            }
+
+            if (streamSubscriptions == null)
+                throw new Exception($"{userFriendlyName}. Unexpected error. Can not add key '{sw.Info.BinanceStreamName}' " +
+                                    $"to {nameof(subscriptions)} dictionary");
+
+            streamSubscriptions[sw.Info.Id] = sw;
+
+            return needSubscribeToChannel;
+        }
+
         private void RestoreSubscriptions()
         {
             // TODO:
+        }
+
+        private CommandResponse<object> SubscribeToStream(string binanceStreamName)
+        {
+            while (!disposed && WsConnectionStatus != DataStreamStatus.Active)
+            {
+                Open();
+                if (WsConnectionStatus != DataStreamStatus.Active)
+                    Thread.Sleep(500);
+            }
+
+            var request = new CommandRequest
+            {
+                Method = CommandRequestMethod.Subscribe,
+                Parameters = new object[] {binanceStreamName},
+                RequestId = GenerateUniqueId()
+            };
+
+            return ProcessRequest<object>(request);
+        }
+
+        #endregion
+
+        #region [Request processing]
+
+        private class CommandResponse<T>
+        {
+            public bool Success { get; set; }
+
+            public T Data { get; set; }
+
+            public string ErrorDescription { get; set; }
+        }
+
+        private CommandResponse<T> ProcessRequest<T>(CommandRequest request)
+        {
+            // TODO: !!!
+            throw new NotImplementedException();
         }
 
         #endregion
@@ -144,7 +258,7 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
         #endregion
         
         #region [Payload processing]
-
+        
         private void OnStreamMessage(object sender, string message)
         {
             Task.Run(() =>
