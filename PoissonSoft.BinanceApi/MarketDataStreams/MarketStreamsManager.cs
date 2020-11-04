@@ -5,9 +5,13 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
+using Newtonsoft.Json;
 using PoissonSoft.BinanceApi.Contracts.MarketDataStream;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Ws;
+using PoissonSoft.BinanceApi.Utils;
+using Timer = System.Timers.Timer;
 
 namespace PoissonSoft.BinanceApi.MarketDataStreams
 {
@@ -24,6 +28,7 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         private readonly string userFriendlyName = nameof(MarketStreamsManager);
         private TimeSpan reconnectTimeout = TimeSpan.Zero;
+        private readonly Timer pongTimer;
 
         public DataStreamStatus WsConnectionStatus { get; private set; } = DataStreamStatus.Closed;
 
@@ -33,12 +38,25 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
             this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
 
-            streamListener = new WebSocketStreamListener(apiClient.Logger, credentials);
+            streamListener = new WebSocketStreamListener(apiClient, credentials);
             streamListener.OnConnected += OnConnectToWs;
             streamListener.OnConnectionClosed += OnDisconnect;
             streamListener.OnMessage += OnStreamMessage;
+
+            // The websocket server will send a ping frame every 3 minutes. If the websocket server does not receive a pong
+            // frame back from the connection within a 10 minute period, the connection will be disconnected.
+            // Unsolicited pong frames are allowed.
+            pongTimer = new Timer
+            {
+                AutoReset = true, 
+                Enabled = false,
+                Interval = TimeSpan.FromMinutes(3).TotalMilliseconds
+            };
+            pongTimer.Elapsed += OnPongTimer;
         }
 
+
+        #region [Interface]
 
         public SubscriptionInfo SubscribePartialBookDepth(string symbol, int levelsCount, int updateSpeedMs, Action<PartialBookDepthPayload> callbackAction)
         {
@@ -82,7 +100,7 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             {
                 var resp = SubscribeToStream(subscriptionInfo.BinanceStreamName);
                 if (!resp.Success)
-                    throw new Exception($"Stream subscription error: {resp.ErrorDescription}");
+                    throw new Exception($"{userFriendlyName}. Stream subscription error: {resp.ErrorDescription}");
             }
 
             return subscriptionInfo;
@@ -99,6 +117,8 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             // TODO:
             throw new NotImplementedException();
         }
+
+        #endregion
 
         #region [Subscription management]
 
@@ -178,11 +198,121 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             public string ErrorDescription { get; set; }
         }
 
+        private class ManualResetEventPool : ObjectPool<ManualResetEventSlim>
+        {
+            public ManualResetEventPool()
+                : base(startSize: 20, minSize: 10, sizeIncrement: 5, availableLimit: 200)
+            { }
+
+            // Новый экземпляр объекта создаётся в не сигнальном состоянии
+            protected override ManualResetEventSlim CreateEntity()
+            {
+                return new ManualResetEventSlim();
+            }
+        }
+
+        private class ResponseWaiter
+        {
+            public CommandRequest Request { get; }
+
+            public ManualResetEventSlim SyncEvent { get; }
+
+            public CommandResponse<object> Response { get; set; }
+
+            public ResponseWaiter(CommandRequest request, ManualResetEventSlim syncEvent)
+            {
+                Request = request;
+                SyncEvent = syncEvent;
+            }
+        }
+
+        private readonly ManualResetEventPool manualResetEventPool = new ManualResetEventPool();
+
+        /// <summary>
+        /// Время ожидания (в миллисекундах) обработки отправленного запроса
+        /// </summary>
+        private const int WAIT_FOR_REQUEST_PROCESSING_MS = 10_000;
+
+        private readonly ConcurrentDictionary<long, ResponseWaiter> responseWaiters =
+            new ConcurrentDictionary<long, ResponseWaiter>();
+
         private CommandResponse<T> ProcessRequest<T>(CommandRequest request)
         {
-            // TODO: !!!
-            throw new NotImplementedException();
+            bool requestWasProcessed;
+            ManualResetEventSlim syncEvent = null;
+            ResponseWaiter waiter = null;
+            try
+            {
+                if (!manualResetEventPool.TryGetEntity(out syncEvent))
+                {
+                    apiClient.Logger.Error($"{userFriendlyName}. Couldn't get the synchronization object from the pool");
+                }
+                syncEvent?.Reset();
+                waiter = new ResponseWaiter(request, syncEvent);
+                responseWaiters.TryAdd(waiter.Request.RequestId, waiter);
+                streamListener.SendMessage(JsonConvert.SerializeObject(request));
+
+                requestWasProcessed = syncEvent != null && syncEvent.Wait(WAIT_FOR_REQUEST_PROCESSING_MS);
+            }
+            finally
+            {
+                if (syncEvent != null) manualResetEventPool.ReturnToPool(syncEvent);
+                if (waiter?.Request != null) responseWaiters.TryRemove(waiter.Request.RequestId, out _);
+            }
+
+            if (!requestWasProcessed)
+            {
+                return new CommandResponse<T>
+                {
+                    Success = false,
+                    ErrorDescription = "A response to the request has not been received within the " +
+                                       $"specified timeout ({WAIT_FOR_REQUEST_PROCESSING_MS} мс)"
+                };
+            }
+
+            if (waiter.Response?.Success == null)
+            {
+                return new CommandResponse<T>
+                {
+                    Success = false,
+                    ErrorDescription = "Incorrect response: " +
+                                       $"{(waiter.Response == null ? "NULL" : JsonConvert.SerializeObject(waiter.Response))}"
+                };
+            }
+            
+            if (waiter.Response?.Success == false)
+            {
+                return new CommandResponse<T>
+                {
+                    Success = false,
+                    ErrorDescription = waiter.Response.ErrorDescription ?? "Error"
+                };
+            }
+
+            T data;
+            try
+            {
+                data = (T) waiter.Response.Data;
+            }
+            catch
+            {
+                return new CommandResponse<T>
+                {
+                    Success = false,
+                    ErrorDescription = "Incorrect data in Response: " +
+                                       $"{(waiter.Response.Data == null ? "NULL" : waiter.Response.Data.GetType().Name)}"
+                };
+            }
+
+            return new CommandResponse<T>
+            {
+                Success = true,
+                ErrorDescription = waiter.Response.ErrorDescription,
+                Data = data
+            };
+
         }
+
 
         #endregion
 
@@ -221,11 +351,16 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             reconnectTimeout = TimeSpan.Zero;
             apiClient.Logger.Info($"{userFriendlyName}. Successfully connected to stream!");
             RestoreSubscriptions();
+
+            pongTimer.Enabled = true;
         }
 
         private void OnDisconnect(object sender, (WebSocketCloseStatus? CloseStatus, string CloseStatusDescription) e)
         {
+            pongTimer.Enabled = false;
+
             if (disposed || WsConnectionStatus == DataStreamStatus.Closing) return;
+
             WsConnectionStatus = DataStreamStatus.Reconnecting;
             if (reconnectTimeout.TotalSeconds < 15) reconnectTimeout += TimeSpan.FromSeconds(1);
             apiClient.Logger.Error($"{userFriendlyName}. WebSocket was disconnected. Try reconnect again after {reconnectTimeout}.");
@@ -255,10 +390,18 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             }
         }
 
+        // The websocket server will send a ping frame every 3 minutes. If the websocket server does not receive a pong
+        // frame back from the connection within a 10 minute period, the connection will be disconnected.
+        // Unsolicited pong frames are allowed.
+        private void OnPongTimer(object sender, ElapsedEventArgs e)
+        {
+            streamListener.SendMessage("pong");
+        }
+
         #endregion
-        
+
         #region [Payload processing]
-        
+
         private void OnStreamMessage(object sender, string message)
         {
             Task.Run(() =>
@@ -283,7 +426,7 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
                 apiClient.Logger.Debug($"{userFriendlyName}. New payload received:\n{message}");
             }
 
-            // TODO:
+            // TODO: !!!
 
         }
 
@@ -306,6 +449,15 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
                     streamListener.OnConnectionClosed -= OnDisconnect;
                     streamListener.OnMessage -= OnStreamMessage;
                     streamListener?.Dispose();
+                }
+
+                manualResetEventPool?.Dispose();
+
+                if (pongTimer != null)
+                {
+                    pongTimer.Enabled = false;
+                    pongTimer.Elapsed -= OnPongTimer;
+                    pongTimer.Dispose();
                 }
             }
 

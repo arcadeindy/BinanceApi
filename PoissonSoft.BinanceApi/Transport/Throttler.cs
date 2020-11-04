@@ -18,11 +18,15 @@ namespace PoissonSoft.BinanceApi.Transport
 
         private readonly string userFriendlyName = nameof(Throttler);
         private readonly WaitablePool syncPool;
+        private readonly WaitablePool syncPoolWs;
         
-        // "Стоимость" одного бала в миллисекундах для каждого из параллельно исполняемых запросов.
+        // "Стоимость" одного бала в миллисекундах для каждого из параллельно исполняемых REST-запросов.
         // Т.е. если в конкретном потоке (одном из всех MaxDegreeOfParallelism параллельных) выполняется запрос
         // с весом 1 балл, то этот поток не должен проводить новых запросов в течение requestWeightCostInMs миллисекунд
         private int weightUnitCostInMs;
+
+        // "Стоимость" одного бала в миллисекундах для каждого из параллельно исполняемых WebSocket-запросов.
+        private readonly int wsWeightUnitCostInMs;
 
         // Значение по умолчанию для времени приостановки запросов после превышения лимита (в секундах)
         private int defaultRetryAfterSec = 60;
@@ -89,7 +93,13 @@ namespace PoissonSoft.BinanceApi.Transport
                 },
             });
 
-            syncPool = new WaitablePool(this.MaxDegreeOfParallelism, highPriorityFeedsCount);
+            syncPool = new WaitablePool(MaxDegreeOfParallelism, highPriorityFeedsCount);
+
+            const int WS_MaxDegreeOfParallelism = 5;
+            // WebSocket connections have a limit of 5 incoming messages per second.
+            const int WS_RequestLimitPerSecond = 5;
+            syncPoolWs = new WaitablePool(WS_MaxDegreeOfParallelism, 0);
+            wsWeightUnitCostInMs = WS_MaxDegreeOfParallelism * 1000 / WS_RequestLimitPerSecond;
         }
 
         /// <summary>
@@ -152,7 +162,7 @@ namespace PoissonSoft.BinanceApi.Transport
             var waitTime = (DateTimeOffset.UtcNow - dt).TotalSeconds;
             if (waitTime > 5)
             {
-                apiClient.Logger.Warn($"{userFriendlyName}. Время ожидания тротлинга составило {waitTime:F0} секунд. " +
+                apiClient.Logger.Warn($"{userFriendlyName}. Время ожидания тротлинга REST-запроса составило {waitTime:F0} секунд. " +
                                       "Возможно, следует оптимизировать прикладные алгоритмы с целью сокращения количества запросов");
             }
 
@@ -167,6 +177,24 @@ namespace PoissonSoft.BinanceApi.Transport
             // - в подавляющем большинстве случаев запрос будет пропускаться, при этом лишняя задержка на Interlocked операцию здесь выглядит совсем лишней
             if (DateTimeOffset.UtcNow < (DateTimeOffset)rateLimitPausedTime)
                 throw new RequestRateLimitBreakingException($"All requests banned until {(DateTimeOffset)rateLimitPausedTime}");
+        }
+
+        /// <summary>
+        /// WebSocket send message throttling
+        /// 
+        /// </summary>
+        /// <param name="requestWeight"></param>
+        public void ThrottleWs(int requestWeight)
+        {
+            var dt = DateTimeOffset.UtcNow;
+            var locker = syncPool.Wait(false);
+            locker.UnlockAfterMs(requestWeight * wsWeightUnitCostInMs);
+            var waitTime = (DateTimeOffset.UtcNow - dt).TotalSeconds;
+            if (waitTime > 5)
+            {
+                apiClient.Logger.Warn($"{userFriendlyName}. Время ожидания тротлинга WebSocket-запроса составило {waitTime:F0} секунд. " +
+                                      "Возможно, следует оптимизировать прикладные алгоритмы с целью сокращения количества запросов");
+            }
         }
 
         /// <summary>
@@ -224,6 +252,7 @@ namespace PoissonSoft.BinanceApi.Transport
         public void Dispose()
         {
             syncPool?.Dispose();
+            syncPoolWs?.Dispose();
         }
     }
 }

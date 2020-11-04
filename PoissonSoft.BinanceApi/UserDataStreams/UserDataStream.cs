@@ -95,7 +95,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             pingTimer.Elapsed += OnPingTimer;
             pingTimer.Enabled = true;
 
-            streamListener = new WebSocketStreamListener(apiClient.Logger, credentials);
+            streamListener = new WebSocketStreamListener(apiClient, credentials);
             streamListener.OnConnected += OnConnectToStream;
             streamListener.OnConnectionClosed += OnDisconnect;
             streamListener.OnMessage += OnStreamMessage;

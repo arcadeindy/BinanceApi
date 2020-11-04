@@ -10,6 +10,7 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
 {
     internal sealed class WebSocketStreamListener: IDisposable
     {
+        private readonly BinanceApiClient apiClient;
         private readonly ILogger logger;
         private readonly BinanceApiClientCredentials credentials;
 
@@ -26,9 +27,10 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
         public event EventHandler<string> OnMessage; 
 
 
-        public WebSocketStreamListener(ILogger logger, BinanceApiClientCredentials credentials)
+        public WebSocketStreamListener(BinanceApiClient apiClient, BinanceApiClientCredentials credentials)
         {
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+            logger = apiClient.Logger;
             this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
         }
 
@@ -147,6 +149,8 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
 
         public void SendMessage(string msg)
         {
+            apiClient.Throttler.ThrottleWs(1);
+
             var data = new ArraySegment<byte>(Encoding.UTF8.GetBytes(msg));
             client.SendAsync(data, WebSocketMessageType.Text, true, CancellationToken.None);
         }
