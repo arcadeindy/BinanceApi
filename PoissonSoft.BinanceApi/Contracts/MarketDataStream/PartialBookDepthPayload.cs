@@ -17,15 +17,15 @@ namespace PoissonSoft.BinanceApi.Contracts.MarketDataStream
         public long LastUpdateId { get; set; }
 
         /// <summary>
-        /// Bids
+        /// Bids [Price, Quantity]
         /// </summary>
         [JsonProperty("bids")]
-        public decimal[,] Bids { get; set; }
+        public decimal[][] Bids { get; set; }
 
         /// <summary>
-        /// Asks
+        /// Asks [Price, Quantity]
         /// </summary>
         [JsonProperty("asks")]
-        public decimal[,] Asks { get; set; }
+        public decimal[][] Asks { get; set; }
     }
 }

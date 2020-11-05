@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PoissonSoft.BinanceApi.Contracts.MarketDataStream;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Ws;
@@ -20,7 +21,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
         private const string WS_ENDPOINT = "wss://stream.binance.com:9443/stream";
 
         private readonly BinanceApiClient apiClient;
-        private readonly BinanceApiClientCredentials credentials;
         private readonly WebSocketStreamListener streamListener;
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<long, SubscriptionWrap>> subscriptions =
@@ -36,7 +36,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
         public MarketStreamsManager(BinanceApiClient apiClient, BinanceApiClientCredentials credentials)
         {
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
-            this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
 
             streamListener = new WebSocketStreamListener(apiClient, credentials);
             streamListener.OnConnected += OnConnectToWs;
@@ -426,8 +425,169 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
                 apiClient.Logger.Debug($"{userFriendlyName}. New payload received:\n{message}");
             }
 
-            // TODO: !!!
+            if (message.ToUpperInvariant() == "PING")
+            {
+                // PING message
+                return;
+            }
 
+            var jToken = JToken.Parse(message);
+
+            if (jToken.Type != JTokenType.Object)
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. An unexpected message was received from the server.\n" +
+                                       $"Type: {jToken.Type}, Message: {message}");
+                return;
+            }
+            var jObject = (JObject)jToken;
+
+            // Снимок с данными
+            if (jObject.ContainsKey("stream"))
+            {
+                if (!jObject.ContainsKey("data"))
+                {
+                    apiClient.Logger.Error($"{userFriendlyName}. Stream message does not contains 'data' field.\n" +
+                                           $"Message: {message}");
+                    return;
+                }
+                ProcessPayload(jObject["stream"]?.ToString(), jObject["data"]);
+                return;
+            }
+
+            // Ответ на запрос
+            if (jObject.ContainsKey("result") && jObject.ContainsKey("id"))
+            {
+                ProcessResponse(jObject);
+                return;
+            }
+
+            // Ошибка
+            var waitingRequests = responseWaiters.Values.ToArray().Select(x => JsonConvert.SerializeObject(x.Request));
+
+            apiClient.Logger.Error($"{userFriendlyName}. Получена информация об ошибке: {message}\n" +
+                                   $"Отправленные запросы, ожидающие ответа:\n{string.Join("\n", waitingRequests)}");
+
+        }
+
+        private void ProcessPayload(string streamName, JToken streamData)
+        {
+            if (!subscriptions.TryGetValue(streamName, out var activeSubscriptionsDic))
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. Получено сообщение из потока '{streamName}', " +
+                                       "однако подписок на данный поток не обнаружено");
+                return;
+            }
+
+            var activeSubscriptions = activeSubscriptionsDic.Values.ToList();
+            if (!activeSubscriptions.Any()) return;
+
+            var payloadType = activeSubscriptions.First().Info.StreamType;
+            switch (payloadType)
+            {
+                case DataStreamType.AggregateTrade:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.Trade:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.Candlestick:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.IndividualSymbolMiniTicker:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.AllMarketMiniTickers:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.IndividualSymbolTicker:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.AllMarketTickers:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.IndividualSymbolBookTicker:
+                    // Not implemented yet
+                    break;
+                case DataStreamType.AllBookTickers:
+                    // Not implemented yet
+                    break;
+
+                case DataStreamType.PartialBookDepthStreams:
+                    activeSubscriptions.ForEach(sw =>
+                    {
+                        if (sw.CallbackAction is Action<PartialBookDepthPayload> callback)
+                        {
+                            callback(streamData?.ToObject<PartialBookDepthPayload>());
+                        }
+                    });
+                    break;
+
+                case DataStreamType.DiffDepth:
+                    // Not implemented yet
+                    break;
+                default:
+                    apiClient.Logger.Error($"{userFriendlyName}. Unknown Payload type '{payloadType}'");
+                    break;
+            }
+        }
+
+        private void ProcessResponse(JObject response)
+        {
+            long requestId;
+            try
+            {
+                requestId = response["id"]?.ToObject<long>() 
+                            ?? throw new Exception("При конвертации поля id в long получили значение NULL");
+            }
+            catch (Exception ex)
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. При обработке ответа на запрос не удалось получить ID запроса. " +
+                                       $"Message: {response}\nException {ex}");
+                return;
+            }
+
+            if (!responseWaiters.TryGetValue(requestId, out var waiter))
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. Среди ожидающих ответа запросов не удалось найти запрос " +
+                                       $"с ID={requestId}");
+                return;
+            }
+
+            var cmdResp = new CommandResponse<object>
+            {
+                Success = true
+            };
+            try
+            {
+                switch (waiter.Request.Method)
+                {
+                    case CommandRequestMethod.Subscribe:
+                    case CommandRequestMethod.Unsubscribe:
+                        cmdResp.Data = null;
+                        break;
+                    case CommandRequestMethod.ListSubscriptions:
+                        cmdResp.Data = response["result"]?.ToObject<string[]>();
+                        break;
+                    case CommandRequestMethod.SetProperty:
+                        cmdResp.Data = null;
+                        break;
+                    case CommandRequestMethod.GetProperty:
+                        cmdResp.Data = response["result"]?.ToObject<bool>();
+                        break;
+                    default:
+                        cmdResp.Success = false;
+                        cmdResp.ErrorDescription = $"Unknown Request Method '{waiter.Request.Method}'";
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                cmdResp.Success = false;
+                cmdResp.ErrorDescription = e.Message;
+            }
+
+            waiter.Response = cmdResp;
+            waiter.SyncEvent.Set();
         }
 
         #endregion
