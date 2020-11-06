@@ -14,7 +14,23 @@ namespace BinanceApi.Example
         {
             var actions = new Dictionary<ConsoleKey, string>()
             {
-                [ConsoleKey.A] = "Account Information",
+                [ConsoleKey.A] = "Test New Order",
+                [ConsoleKey.B] = "New Order",
+                [ConsoleKey.C] = "Cancel Order",
+                [ConsoleKey.D] = "Cancel all Open Orders on a Symbol",
+                [ConsoleKey.E] = "Query Order",
+                [ConsoleKey.F] = "Current Open Orders",
+                [ConsoleKey.G] = "All Orders",
+
+                [ConsoleKey.H] = "New OCO",
+                [ConsoleKey.I] = "Cancel OCO",
+                [ConsoleKey.J] = "Query OCO",
+                [ConsoleKey.K] = "Query all OCO",
+                [ConsoleKey.L] = "Query Open OCO",
+                [ConsoleKey.M] = "Query Open OCO",
+
+                [ConsoleKey.N] = "Account Information",
+                [ConsoleKey.O] = "Account Trade Lis",
 
                 [ConsoleKey.Escape] = "Go back",
             };
@@ -23,7 +39,16 @@ namespace BinanceApi.Example
 
             switch (selectedAction)
             {
-                case ConsoleKey.A:
+                case ConsoleKey.F:
+                    SafeCall(() =>
+                    {
+                        var orders = apiClient.SpotAccountApi.GetCurrentOpenOrders(
+                            InputHelper.GetString("Trade instrument symbol: "));
+                        Console.WriteLine(JsonConvert.SerializeObject(orders, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.N:
                     SafeCall(() =>
                     {
                         var exchangeInfo = apiClient.SpotAccountApi.GetAccountInformation();
@@ -34,6 +59,10 @@ namespace BinanceApi.Example
                 case ConsoleKey.Escape:
                     return false;
                 default:
+                    if (actions.ContainsKey(selectedAction))
+                    {
+                        Console.WriteLine($"Method '{actions[selectedAction]}' is not implemented");
+                    }
                     return true;
             }
         }

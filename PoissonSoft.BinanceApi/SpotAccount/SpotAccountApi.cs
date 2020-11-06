@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
@@ -18,6 +19,26 @@ namespace PoissonSoft.BinanceApi.SpotAccount
             client = new RestClient(logger, "https://api.binance.com/api/v3",
                 new[] {EndpointSecurityType.Trade, EndpointSecurityType.UserData}, credentials, 
                 this.apiClient.Throttler);
+        }
+
+        public BinanceOrder[] GetCurrentOpenOrders(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return client.MakeRequest<BinanceOrder[]>(new RequestParameters(HttpMethod.Get, "openOrders", 40)
+                {
+                    IsOrderRequest = true
+                });
+            }
+
+            return client.MakeRequest<BinanceOrder[]>(new RequestParameters(HttpMethod.Get, "openOrders", 1)
+            {
+                IsOrderRequest = true,
+                Parameters = new Dictionary<string, string>
+                {
+                    ["symbol"] = symbol
+                }
+            });
         }
 
         public AccountInformation GetAccountInformation()
