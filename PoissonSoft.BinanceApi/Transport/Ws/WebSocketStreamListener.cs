@@ -44,8 +44,16 @@ namespace PoissonSoft.BinanceApi.Transport.Ws
                 client.Options.Proxy = ProxyHelper.CreateProxy(credentials);
                 cancellationTokenSource = new CancellationTokenSource();
                 socketFinishedTcs = new TaskCompletionSource<object>();
-                var t = client.ConnectAsync(new Uri(url), cancellationTokenSource.Token);
-                t.Wait();
+                try
+                {
+                    var t = client.ConnectAsync(new Uri(url), cancellationTokenSource.Token);
+                    t.Wait();
+                }
+                catch
+                {
+                    socketFinishedTcs.SetResult(null);
+                    throw;
+                }
                 OnConnected?.Invoke(this, EventArgs.Empty);
                 _ = StartListening();
             }

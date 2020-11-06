@@ -430,8 +430,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             WsConnectionStatus = DataStreamStatus.Active;
             reconnectTimeout = TimeSpan.Zero;
             apiClient.Logger.Info($"{userFriendlyName}. Successfully connected to stream!");
-            RestoreSubscriptions();
-
             pongTimer.Enabled = true;
         }
 
@@ -448,6 +446,7 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             {
                 Task.Delay(reconnectTimeout);
                 TryConnectToWebSocket();
+                RestoreSubscriptions();
             });
         }
 
