@@ -107,14 +107,50 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         public bool Unsubscribe(long subscriptionId)
         {
-            // TODO:
-            throw new NotImplementedException();
+            var streams = subscriptions.Keys.ToArray();
+            foreach (var streamKey in streams)
+            {
+                if (!subscriptions.TryGetValue(streamKey, out var subscriptionsByKey)
+                    || !subscriptionsByKey.ContainsKey(subscriptionId)) continue;
+
+                if (!subscriptionsByKey.TryRemove(subscriptionId, out _)) return true;
+
+                if (!subscriptionsByKey.IsEmpty) return true;
+
+                if (!subscriptions.TryRemove(streamKey, out _)) return true;
+
+                var resp = UnsubscribeStream(streamKey);
+                if (!resp.Success)
+                {
+                    apiClient.Logger.Error($"{userFriendlyName}. Stream unsubscription error: {resp.ErrorDescription}");
+                }
+
+                return resp.Success;
+
+            }
+
+            apiClient.Logger.Error($"{userFriendlyName}. Не удалось отписаться от подписки {subscriptionId}");
+            return false;
         }
 
         public void UnsubscribeAll()
         {
-            // TODO:
-            throw new NotImplementedException();
+            if (WsConnectionStatus == DataStreamStatus.Active)
+            {
+                var resp = GetAllStreams();
+                if (!resp.Success) 
+                    throw new Exception($"{userFriendlyName}. Не удалось получить список активных подписок");
+
+                if (resp.Data?.Any() == true)
+                {
+                    foreach (var streamKey in resp.Data)
+                    {
+                        UnsubscribeStream(streamKey);
+                    }
+                }
+            }
+
+            subscriptions.Clear();
         }
 
         #endregion
@@ -162,7 +198,18 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         private void RestoreSubscriptions()
         {
-            // TODO:
+            var currentStreams = subscriptions.Keys.ToArray();
+            if (!currentStreams.Any()) return;
+
+            foreach (var streamKey in currentStreams)
+            {
+                var resp = SubscribeToStream(streamKey);
+                if (!resp.Success)
+                {
+                    apiClient.Logger.Error($"{userFriendlyName}. Не удалось возобновить подписку на stream '{streamKey}'. " +
+                                           $"Ошибка: {resp.ErrorDescription}");
+                }
+            }
         }
 
         private CommandResponse<object> SubscribeToStream(string binanceStreamName)
@@ -182,6 +229,40 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             };
 
             return ProcessRequest<object>(request);
+        }
+
+        private CommandResponse<object> UnsubscribeStream(string binanceStreamName)
+        {
+            if (WsConnectionStatus != DataStreamStatus.Active) return new CommandResponse<object>
+            {
+                Success = true
+            };
+
+            var request = new CommandRequest
+            {
+                Method = CommandRequestMethod.Unsubscribe,
+                Parameters = new object[] { binanceStreamName },
+                RequestId = GenerateUniqueId()
+            };
+
+            return ProcessRequest<object>(request);
+        }
+
+        private CommandResponse<string[]> GetAllStreams()
+        {
+            if (WsConnectionStatus != DataStreamStatus.Active) return new CommandResponse<string[]>
+            {
+                Success = true,
+                Data = Array.Empty<string>()
+            };
+
+            var request = new CommandRequest
+            {
+                Method = CommandRequestMethod.ListSubscriptions,
+                RequestId = GenerateUniqueId()
+            };
+
+            return ProcessRequest<string[]>(request);
         }
 
         #endregion
