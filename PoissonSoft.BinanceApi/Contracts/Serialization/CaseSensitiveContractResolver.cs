@@ -42,7 +42,7 @@ namespace PoissonSoft.BinanceApi.Contracts.Serialization
             {
                 if (!usedNames.Contains(n) && collection.GetProperty(n, StringComparison.Ordinal) == null)
                 {
-                    collection.Add(new JsonProperty
+                    collection.AddProperty(new JsonProperty
                     {
                         PropertyName = n,
                         Ignored = true
