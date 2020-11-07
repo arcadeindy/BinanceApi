@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.UserDataStreams;
@@ -125,7 +126,7 @@ namespace PoissonSoft.BinanceApi.SpotAccount
                 AccountInformation snapshot = null;
                 try
                 {
-                    snapshot = apiClient.SpotAccountApi.GetAccountInformation();
+                    snapshot = apiClient.SpotAccountApi.AccountInformation();
                 }
                 catch (Exception e)
                 {

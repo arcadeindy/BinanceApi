@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Rest;
 
@@ -21,7 +22,18 @@ namespace PoissonSoft.BinanceApi.SpotAccount
                 this.apiClient.Throttler);
         }
 
-        public BinanceOrder[] GetCurrentOpenOrders(string symbol)
+        public BinanceOrder NewOrder(NewOrderRequest request, bool isHighPriority)
+        {
+            return client.MakeRequest<BinanceOrder>(new RequestParameters(HttpMethod.Post, "order", 1)
+            {
+                IsHighPriority = isHighPriority,
+                IsOrderRequest = true,
+                PassAllParametersInQueryString = true,
+                Parameters = RequestParameters.GenerateParametersFromObject(request)
+            });
+        }
+
+        public BinanceOrder[] CurrentOpenOrders(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))
             {
@@ -41,7 +53,7 @@ namespace PoissonSoft.BinanceApi.SpotAccount
             });
         }
 
-        public AccountInformation GetAccountInformation()
+        public AccountInformation AccountInformation()
         {
             return client.MakeRequest<AccountInformation>(new RequestParameters(HttpMethod.Get, "account", 5));
         }

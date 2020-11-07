@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+﻿using Newtonsoft.Json;
 using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 
-namespace PoissonSoft.BinanceApi.Contracts
+namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
 {
     /// <summary>
     /// Order
@@ -37,6 +32,13 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// </summary>
         [JsonProperty("clientOrderId")]
         public string ClientOrderId { get; set; }
+
+        /// <summary>
+        /// Transaction time. (Only in New Order response)
+        /// "transactTime": 1507725176595,
+        /// </summary>
+        [JsonProperty("transactTime")]
+        public long TransactionTime { get; set; }
 
         /// <summary>
         /// "price": "0.1",
@@ -133,5 +135,42 @@ namespace PoissonSoft.BinanceApi.Contracts
         /// </summary>
         [JsonProperty("origQuoteOrderQty")]
         public decimal OriginalQuoteOrderQuantity { get; set; }
+
+        /// <summary>
+        /// Only in New Order response
+        /// "fills":[...]
+        /// </summary>
+        [JsonProperty("fills")]
+        public FillReport[] Fills { get; set; }
+    }
+
+    /// <summary>
+    /// Информация о сделке по ордеру
+    /// </summary>
+    public class FillReport
+    {
+        /// <summary>
+        /// "price": "4000.00000000",
+        /// </summary>
+        [JsonProperty("price")]
+        public decimal Price { get; set; }
+
+        /// <summary>
+        /// "qty": "1.00000000",
+        /// </summary>
+        [JsonProperty("qty")]
+        public decimal Quantity { get; set; }
+
+        /// <summary>
+        /// "commission": "4.00000000",
+        /// </summary>
+        [JsonProperty("commission")]
+        public decimal Commission { get; set; }
+
+        /// <summary>
+        /// "commissionAsset": "USDT"
+        /// </summary>
+        [JsonProperty("commissionAsset")]
+        public string CommissionAsset { get; set; }
     }
 }

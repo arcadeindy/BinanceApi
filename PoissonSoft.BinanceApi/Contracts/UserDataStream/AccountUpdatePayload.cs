@@ -26,6 +26,7 @@
 
 
 using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 
 namespace PoissonSoft.BinanceApi.Contracts.UserDataStream
 {

@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 
-namespace PoissonSoft.BinanceApi.Contracts
+namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
 {
     /// <summary>
     /// Информация об аккаунте

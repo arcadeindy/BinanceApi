@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace PoissonSoft.BinanceApi.Contracts
+namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
 {
     /// <summary>
     /// Баланс конкретной монеты

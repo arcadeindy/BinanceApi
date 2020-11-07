@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.Enums;
+using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
 using PoissonSoft.BinanceApi.UserDataStreams;
 using PoissonSoft.CommonUtils.ConsoleUtils;
@@ -37,12 +40,32 @@ namespace BinanceApi.Example
 
             var selectedAction = InputHelper.GetUserAction("Select action:", actions);
 
+
             switch (selectedAction)
             {
+                case ConsoleKey.B: // New Order
+                    SafeCall(() =>
+                    {
+                        var order = apiClient.SpotAccountApi.NewOrder(
+                            new NewOrderRequest
+                            {
+                                Symbol = InputHelper.GetString("Trade instrument symbol: "),
+                                Side = InputHelper.GetEnum<OrderSide>("Side"),
+                                Type = InputHelper.GetEnum<OrderType>("Type"),
+                                TimeInForce = InputHelper.GetEnum<TimeInForce>("Time in Force"),
+                                QuantityBase = InputHelper.GetDecimal("Quantity (base asset): "),
+                                Price = InputHelper.GetDecimal("Price: "),
+                            },
+                            true
+                        );
+                        Console.WriteLine(JsonConvert.SerializeObject(order, Formatting.Indented));
+                    });
+                    return true;
+
                 case ConsoleKey.F:
                     SafeCall(() =>
                     {
-                        var orders = apiClient.SpotAccountApi.GetCurrentOpenOrders(
+                        var orders = apiClient.SpotAccountApi.CurrentOpenOrders(
                             InputHelper.GetString("Trade instrument symbol: "));
                         Console.WriteLine(JsonConvert.SerializeObject(orders, Formatting.Indented));
                     });
@@ -51,7 +74,7 @@ namespace BinanceApi.Example
                 case ConsoleKey.N:
                     SafeCall(() =>
                     {
-                        var exchangeInfo = apiClient.SpotAccountApi.GetAccountInformation();
+                        var exchangeInfo = apiClient.SpotAccountApi.AccountInformation();
                         Console.WriteLine(JsonConvert.SerializeObject(exchangeInfo, Formatting.Indented));
                     });
                     return true;

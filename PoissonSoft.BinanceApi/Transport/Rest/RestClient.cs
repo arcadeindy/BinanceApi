@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts.Exceptions;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
@@ -266,6 +267,28 @@ namespace PoissonSoft.BinanceApi.Transport.Rest
             Method = method;
             UrlPath = urlPath;
             RequestWeight = requestWeight;
+        }
+
+        private static readonly JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+            FloatParseHandling = FloatParseHandling.Decimal
+        };
+        public static Dictionary<string, string> GenerateParametersFromObject(object obj)
+        {
+            if (obj == null) return null;
+            try
+            {
+                var jObject = JObject.Parse(JsonConvert.SerializeObject(obj, jsonSerializerSettings));
+                return jObject.Children()
+                    .Cast<JProperty>()
+                    .Where(x => x.Value.Type != JTokenType.Null)
+                    .ToDictionary(x => x.Name, x => x.Value.ToString());
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
