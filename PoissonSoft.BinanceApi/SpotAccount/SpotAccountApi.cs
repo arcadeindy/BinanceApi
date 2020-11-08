@@ -33,6 +33,12 @@ namespace PoissonSoft.BinanceApi.SpotAccount
             });
         }
 
+        public OrderReport CancelOrder(CancelOrderRequest request, bool isHighPriority)
+        {
+            // TODO: 
+            throw new NotImplementedException();
+        }
+
         public BinanceOrder[] CurrentOpenOrders(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))

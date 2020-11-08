@@ -1,19 +1,29 @@
-﻿using Newtonsoft.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Newtonsoft.Json;
 using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 
 namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
 {
     /// <summary>
-    /// Order
+    /// Cancel order report
     /// </summary>
-    public class BinanceOrder
+    public class OrderReport
     {
         /// <summary>
         /// "symbol": "LTCBTC",
         /// </summary>
         [JsonProperty("symbol")]
         public string Symbol { get; set; }
+
+        /// <summary>
+        /// Client ID of the order which was cancelled
+        /// "origClientOrderId": "myOrder1",
+        /// </summary>
+        [JsonProperty("origClientOrderId")]
+        public string OriginalClientOrderId { get; set; }
 
         /// <summary>
         /// "orderId": 1,
@@ -28,17 +38,11 @@ namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
         public long OrderListId { get; set; }
 
         /// <summary>
-        /// "clientOrderId": "myOrder1",
+        /// Used to uniquely identify cancellation request
+        /// "clientOrderId": "cancelMyOrder1",
         /// </summary>
         [JsonProperty("clientOrderId")]
         public string ClientOrderId { get; set; }
-
-        /// <summary>
-        /// Transaction time. (Only in New Order response)
-        /// "transactTime": 1507725176595,
-        /// </summary>
-        [JsonProperty("transactTime")]
-        public long TransactionTime { get; set; }
 
         /// <summary>
         /// "price": "0.1",
@@ -65,7 +69,7 @@ namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
         public decimal CumulativeQuoteQuantity { get; set; }
 
         /// <summary>
-        /// "status": "NEW",
+        /// "status": "CANCELED",
         /// </summary>
         [JsonConverter(typeof(StringEnumExConverter), OrderStatus.Unknown)]
         public OrderStatus Status { get; set; }
@@ -107,70 +111,5 @@ namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
         /// </summary>
         [JsonProperty("icebergQty")]
         public decimal IcebergQuantity { get; set; }
-
-        /// <summary>
-        /// Order create time
-        /// "time": 1499827319559,
-        /// </summary>
-        [JsonProperty("time")]
-        public long Time { get; set; }
-
-        /// <summary>
-        /// Order update time
-        /// "updateTime": 1499827319559,
-        /// </summary>
-        [JsonProperty("updateTime")]
-        public long UpdateTime { get; set; }
-
-        /// <summary>
-        /// Is this order in the book?
-        /// "isWorking": true,
-        /// </summary>
-        [JsonProperty("isWorking")]
-        public bool IsWorking { get; set; }
-
-        /// <summary>
-        /// Original quantity in quote asset
-        /// "origQuoteOrderQty": "0.000000" 
-        /// </summary>
-        [JsonProperty("origQuoteOrderQty")]
-        public decimal OriginalQuoteOrderQuantity { get; set; }
-
-        /// <summary>
-        /// Only in New Order response
-        /// "fills":[...]
-        /// </summary>
-        [JsonProperty("fills")]
-        public FillReport[] Fills { get; set; }
-    }
-
-    /// <summary>
-    /// Информация о сделке по ордеру
-    /// </summary>
-    public class FillReport
-    {
-        /// <summary>
-        /// "price": "4000.00000000",
-        /// </summary>
-        [JsonProperty("price")]
-        public decimal Price { get; set; }
-
-        /// <summary>
-        /// "qty": "1.00000000",
-        /// </summary>
-        [JsonProperty("qty")]
-        public decimal Quantity { get; set; }
-
-        /// <summary>
-        /// "commission": "4.00000000",
-        /// </summary>
-        [JsonProperty("commission")]
-        public decimal Commission { get; set; }
-
-        /// <summary>
-        /// "commissionAsset": "USDT"
-        /// </summary>
-        [JsonProperty("commissionAsset")]
-        public string CommissionAsset { get; set; }
     }
 }
