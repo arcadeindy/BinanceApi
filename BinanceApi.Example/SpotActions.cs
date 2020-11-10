@@ -62,7 +62,33 @@ namespace BinanceApi.Example
                     });
                     return true;
 
-                case ConsoleKey.F:
+                case ConsoleKey.C: // Cancel Order
+                    SafeCall(() =>
+                    {
+                        var order = apiClient.SpotAccountApi.CancelOrder(
+                            new CancelOrderRequest
+                            {
+                                Symbol = InputHelper.GetString("Trade instrument symbol: "),
+                                OrderId = InputHelper.GetLong("Order Id: "),
+                            },
+                            true
+                        );
+                        Console.WriteLine(JsonConvert.SerializeObject(order, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.D: // Cancel all Open Orders on a Symbol
+                    SafeCall(() =>
+                    {
+                        var resp = apiClient.SpotAccountApi.CancelAllOrdersOnSymbol(
+                                InputHelper.GetString("Trade instrument symbol: "),
+                            true
+                        );
+                        Console.WriteLine(JsonConvert.SerializeObject(resp, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.F: // Current Open Orders
                     SafeCall(() =>
                     {
                         var orders = apiClient.SpotAccountApi.CurrentOpenOrders(
@@ -71,7 +97,7 @@ namespace BinanceApi.Example
                     });
                     return true;
 
-                case ConsoleKey.N:
+                case ConsoleKey.N: // Account Information
                     SafeCall(() =>
                     {
                         var exchangeInfo = apiClient.SpotAccountApi.AccountInformation();

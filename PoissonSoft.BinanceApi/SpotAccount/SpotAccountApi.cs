@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
+using Newtonsoft.Json.Linq;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Contracts.SpotAccount;
@@ -35,8 +37,48 @@ namespace PoissonSoft.BinanceApi.SpotAccount
 
         public OrderReport CancelOrder(CancelOrderRequest request, bool isHighPriority)
         {
-            // TODO: 
-            throw new NotImplementedException();
+            return client.MakeRequest<OrderReport>(new RequestParameters(HttpMethod.Delete, "order", 1)
+            {
+                IsHighPriority = isHighPriority,
+                IsOrderRequest = true,
+                PassAllParametersInQueryString = true,
+                Parameters = RequestParameters.GenerateParametersFromObject(request)
+            });
+        }
+
+        public OrderReportsContainer CancelAllOrdersOnSymbol(string binanceSymbol, bool isHighPriority)
+        {
+            var respArray = client.MakeRequest<JArray>(new RequestParameters(HttpMethod.Delete, "openOrders", 1)
+            {
+                IsHighPriority = isHighPriority,
+                IsOrderRequest = true,
+                PassAllParametersInQueryString = true,
+                Parameters = new Dictionary<string, string>
+                {
+                    ["symbol"] = binanceSymbol
+                }
+            });
+
+            var orders = new List<OrderReport>();
+            var ocoOrders = new List<OCOOrderReport>();
+
+            foreach (var jObject in respArray.OfType<JObject>())
+            {
+                if (jObject.ContainsKey("contingencyType"))
+                {
+                    ocoOrders.Add(jObject.ToObject<OCOOrderReport>());
+                }
+                else
+                {
+                    orders.Add(jObject.ToObject<OrderReport>());
+                }
+            }
+
+            return new OrderReportsContainer
+            {
+                Orders = orders,
+                OCOOrders = ocoOrders
+            };
         }
 
         public BinanceOrder[] CurrentOpenOrders(string symbol)

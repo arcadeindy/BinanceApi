@@ -21,6 +21,13 @@ namespace PoissonSoft.BinanceApi.SpotAccount
         OrderReport CancelOrder(CancelOrderRequest request, bool isHighPriority);
 
         /// <summary>
+        /// Cancels all active orders on a symbol.
+        /// This includes OCO orders.
+        /// </summary>
+        /// <returns></returns>
+        OrderReportsContainer CancelAllOrdersOnSymbol(string binanceSymbol, bool isHighPriority);
+
+        /// <summary>
         /// Get all open orders on a symbol. Careful when accessing this with no symbol.
         /// Weight: 1 for a single symbol; 40 when the symbol parameter is omitted
         /// </summary>
