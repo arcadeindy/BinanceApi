@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
 using NLog;
-using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Rest;
@@ -13,15 +12,14 @@ namespace PoissonSoft.BinanceApi.SpotAccount
 {
     internal sealed class SpotAccountApi : ISpotAccountApi, IDisposable
     {
-        private readonly BinanceApiClient apiClient;
         private readonly RestClient client;
 
         public SpotAccountApi(BinanceApiClient apiClient, BinanceApiClientCredentials credentials, ILogger logger)
         {
-            this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+            if (apiClient == null) throw new ArgumentNullException(nameof(apiClient));
             client = new RestClient(logger, "https://api.binance.com/api/v3",
                 new[] {EndpointSecurityType.Trade, EndpointSecurityType.UserData}, credentials, 
-                this.apiClient.Throttler);
+                apiClient.Throttler);
         }
 
         public BinanceOrder NewOrder(NewOrderRequest request, bool isHighPriority)
@@ -104,6 +102,17 @@ namespace PoissonSoft.BinanceApi.SpotAccount
         public AccountInformation AccountInformation()
         {
             return client.MakeRequest<AccountInformation>(new RequestParameters(HttpMethod.Get, "account", 5));
+        }
+
+        public BinanceTrade[] AccountTradeList(TradeListRequest request, bool isHighPriority)
+        {
+            return client.MakeRequest<BinanceTrade[]>(new RequestParameters(HttpMethod.Get, "myTrades", 5)
+            {
+                IsHighPriority = isHighPriority,
+                IsOrderRequest = true,
+                PassAllParametersInQueryString = true,
+                Parameters = RequestParameters.GenerateParametersFromObject(request)
+            });
         }
 
         public void Dispose()

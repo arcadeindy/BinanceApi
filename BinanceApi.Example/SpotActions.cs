@@ -33,7 +33,7 @@ namespace BinanceApi.Example
                 [ConsoleKey.M] = "Query Open OCO",
 
                 [ConsoleKey.N] = "Account Information",
-                [ConsoleKey.O] = "Account Trade Lis",
+                [ConsoleKey.O] = "Account Trade List",
 
                 [ConsoleKey.Escape] = "Go back",
             };
@@ -105,8 +105,23 @@ namespace BinanceApi.Example
                     });
                     return true;
 
+                case ConsoleKey.O: // Account Trade List
+                    SafeCall(() =>
+                    {
+                        var order = apiClient.SpotAccountApi.AccountTradeList(
+                            new TradeListRequest
+                            {
+                                Symbol = InputHelper.GetString("Trade instrument symbol: "),
+                            },
+                            true
+                        );
+                        Console.WriteLine(JsonConvert.SerializeObject(order, Formatting.Indented));
+                    });
+                    return true;
+
                 case ConsoleKey.Escape:
                     return false;
+
                 default:
                     if (actions.ContainsKey(selectedAction))
                     {

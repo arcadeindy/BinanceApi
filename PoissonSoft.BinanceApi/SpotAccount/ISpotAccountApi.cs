@@ -40,5 +40,11 @@ namespace PoissonSoft.BinanceApi.SpotAccount
         /// </summary>
         /// <returns></returns>
         AccountInformation AccountInformation();
+
+        /// <summary>
+        /// Get trades for a specific account and symbol.
+        /// </summary>
+        /// <returns></returns>
+        BinanceTrade[] AccountTradeList(TradeListRequest request, bool isHighPriority);
     }
 }
