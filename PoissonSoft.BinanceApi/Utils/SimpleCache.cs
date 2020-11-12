@@ -6,6 +6,7 @@ namespace PoissonSoft.BinanceApi.Utils
     internal class SimpleCache<T> where T: ICloneable
     {
         private readonly Func<T> loadDataDelegate;
+        private readonly Func<T, T> cloneDataDelegate;
         private readonly ILogger logger;
 
         private T cachedValue;
@@ -14,9 +15,10 @@ namespace PoissonSoft.BinanceApi.Utils
 
         public string Name { get; }
 
-        public SimpleCache(Func<T> loadDataDelegate, ILogger logger, string name = null)
+        public SimpleCache(Func<T> loadDataDelegate, ILogger logger, string name = null, Func<T, T> cloneDataDelegate = null)
         {
             this.loadDataDelegate = loadDataDelegate ?? throw new ArgumentNullException(nameof(loadDataDelegate));
+            this.cloneDataDelegate = cloneDataDelegate;
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             Name = string.IsNullOrWhiteSpace(name)
                 ? $"SimpleCache of {typeof(T).Name}"
@@ -26,12 +28,12 @@ namespace PoissonSoft.BinanceApi.Utils
         public T GetValue(TimeSpan cacheValidityInterval)
         {
             if (cachedValue != null && dataUploadTime > DateTimeOffset.UtcNow - cacheValidityInterval)
-                return (T)cachedValue?.Clone();
+                return CloneData(cachedValue);
 
             lock (syncObj)
             {
                 if (cachedValue != null && dataUploadTime > DateTimeOffset.UtcNow - cacheValidityInterval)
-                    return (T)cachedValue?.Clone();
+                    return CloneData(cachedValue);
 
                 try
                 {
@@ -44,7 +46,13 @@ namespace PoissonSoft.BinanceApi.Utils
                 }
             }
 
-            return (T)cachedValue?.Clone();
+            return CloneData(cachedValue);
+        }
+
+        public T CloneData(T data)
+        {
+            if (cloneDataDelegate != null) return cloneDataDelegate(data);
+            return (T)data?.Clone();
         }
     }
 }

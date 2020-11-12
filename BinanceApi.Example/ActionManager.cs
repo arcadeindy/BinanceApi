@@ -16,7 +16,6 @@ namespace BinanceApi.Example
             this.apiClient = apiClient;
         }
 
-
         public void Run()
         {
             while (ShowMainPage()) { }
@@ -46,8 +45,7 @@ namespace BinanceApi.Example
             switch (selectedAction)
             {
                 case ConsoleKey.A:
-                    // TODO:
-                    Console.WriteLine("Not implemented yet");
+                    while (ShowWalletApiPage()) { }
                     return true;
 
                 case ConsoleKey.B:

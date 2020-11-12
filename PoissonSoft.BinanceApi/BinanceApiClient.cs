@@ -5,6 +5,7 @@ using PoissonSoft.BinanceApi.MarketDataStreams;
 using PoissonSoft.BinanceApi.SpotAccount;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.UserDataStreams;
+using PoissonSoft.BinanceApi.Wallet;
 
 namespace PoissonSoft.BinanceApi
 {
@@ -32,6 +33,7 @@ namespace PoissonSoft.BinanceApi
             spotDataCollector = new SpotDataCollector(this);
             marketDataApi = new MarketDataApi(this, credentials, logger);
             spotAccountApi = new SpotAccountApi(this, credentials, logger);
+            walletApi = new WalletApi(this, credentials, logger);
 
             marketStreamsManager = new MarketStreamsManager(this, credentials);
         }
@@ -42,6 +44,12 @@ namespace PoissonSoft.BinanceApi
         public bool IsDebug { get; set; } = false;
 
         internal Throttler Throttler { get; }
+
+        /// <summary>
+        /// Rest-API для получение рыночных данных
+        /// </summary>
+        public IWalletApi WalletApi => walletApi;
+        private readonly WalletApi walletApi;
 
         /// <summary>
         /// Rest-API для получение рыночных данных
@@ -88,6 +96,7 @@ namespace PoissonSoft.BinanceApi
 
             marketDataApi?.Dispose();
             spotAccountApi?.Dispose();
+            walletApi?.Dispose();
             
             Throttler?.Dispose();
         }
