@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections;
-using System.Diagnostics;
-using System.Globalization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using NLog;
 using PoissonSoft.BinanceApi;
-using PoissonSoft.BinanceApi.Contracts.Serialization;
-using PoissonSoft.BinanceApi.Contracts.UserDataStream;
 
 namespace BinanceApi.Example
 {

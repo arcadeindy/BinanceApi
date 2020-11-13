@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using PoissonSoft.BinanceApi.Contracts.Wallet;
+﻿using PoissonSoft.BinanceApi.Contracts.Wallet;
 
 namespace PoissonSoft.BinanceApi.Wallet
 {
@@ -18,6 +15,24 @@ namespace PoissonSoft.BinanceApi.Wallet
         /// или были получены ранее указанного времени, то будут загружены актуальные данные</param>
         /// <returns></returns>
         BinanceCoinInfo[] AllCoinsInformation(int cacheValidityIntervalSec = 10 * 60);
+
+        /// <summary>
+        /// Submit a withdraw request.
+        /// </summary>
+        /// <returns></returns>
+        WithdrawResponse Withdraw(WithdrawRequest request);
+
+        /// <summary>
+        /// Fetch deposit history.
+        /// </summary>
+        /// <returns></returns>
+        DepositInfo[] DepositHistory(DepositHistoryRequest request);
+
+        /// <summary>
+        /// Fetch withdraw history.
+        /// </summary>
+        /// <returns></returns>
+        WithdrawInfo[] WithdrawHistory(WithdrawHistoryRequest request);
 
         /// <summary>
         /// Fetch deposit address with network.

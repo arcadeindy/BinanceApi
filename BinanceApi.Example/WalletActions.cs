@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using PoissonSoft.BinanceApi.Contracts.Enums;
 using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
+using PoissonSoft.BinanceApi.Contracts.Wallet;
 using PoissonSoft.BinanceApi.UserDataStreams;
 using PoissonSoft.CommonUtils.ConsoleUtils;
 
@@ -26,7 +27,7 @@ namespace BinanceApi.Example
                 [ConsoleKey.E] = "Enable Fast Withdraw Switch",
 
                 [ConsoleKey.F] = "Withdraw [SAPI]",
-                [ConsoleKey.G] = "Withdraw [WAPI]",
+                //[ConsoleKey.G] = "Withdraw [WAPI]",
 
                 [ConsoleKey.H] = "Deposit History (supporting network)",
                 //[ConsoleKey.I] = "Deposit History",
@@ -56,6 +57,48 @@ namespace BinanceApi.Example
                     SafeCall(() =>
                     {
                         var data = apiClient.WalletApi.AllCoinsInformation();
+                        Console.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.F: // Withdraw [SAPI]
+                    SafeCall(() =>
+                    {
+                        var withdrawRequest = new WithdrawRequest
+                        {
+                            Coin = InputHelper.GetString("Coin: "),
+                            Address = InputHelper.GetString("Address: "),
+                            AddressTag = InputHelper.GetString("AddressTag: "),
+                            Amount = InputHelper.GetDecimal("Amount: ")
+                        };
+                        if (withdrawRequest.AddressTag == string.Empty) withdrawRequest.AddressTag = null;
+
+                        if (!InputHelper.Confirm($"Warning! Do you really want to withdraw {withdrawRequest.Amount} {withdrawRequest.Coin} " +
+                                                 $"to address {withdrawRequest.Address}|{withdrawRequest.AddressTag}?")) return;
+
+                        var data = apiClient.WalletApi.Withdraw(withdrawRequest);
+                        Console.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.H: // Deposit History (supporting network)
+                    SafeCall(() =>
+                    {
+                        var data = apiClient.WalletApi.DepositHistory(new DepositHistoryRequest
+                            {
+                                Coin = InputHelper.GetString("Coin: "),
+                            });
+                        Console.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.J: // Withdraw History (supporting network)
+                    SafeCall(() =>
+                    {
+                        var data = apiClient.WalletApi.WithdrawHistory(new WithdrawHistoryRequest
+                        {
+                            Coin = InputHelper.GetString("Coin: "),
+                        });
                         Console.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
                     });
                     return true;

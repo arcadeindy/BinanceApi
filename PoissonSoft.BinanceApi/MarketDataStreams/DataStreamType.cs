@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace PoissonSoft.BinanceApi.MarketDataStreams
+﻿namespace PoissonSoft.BinanceApi.MarketDataStreams
 {
     /// <summary>
     /// Type of Data Stream

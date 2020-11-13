@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts.Wallet;
 using PoissonSoft.BinanceApi.Transport;
@@ -14,7 +13,7 @@ namespace PoissonSoft.BinanceApi.Wallet
     internal sealed class WalletApi : IWalletApi, IDisposable
     {
         private readonly RestClient sApiClient;
-        private readonly RestClient wApiClient;
+        //private readonly RestClient wApiClient;
 
         public WalletApi(BinanceApiClient apiClient, BinanceApiClientCredentials credentials, ILogger logger)
         {
@@ -22,9 +21,9 @@ namespace PoissonSoft.BinanceApi.Wallet
             sApiClient = new RestClient(logger, "https://api.binance.com/sapi/v1",
                 new[] { EndpointSecurityType.UserData }, credentials,
                 apiClient.Throttler);
-            wApiClient = new RestClient(logger, "https://api.binance.com/wapi/v3",
-                new[] { EndpointSecurityType.UserData }, credentials,
-                apiClient.Throttler);
+            //wApiClient = new RestClient(logger, "https://api.binance.com/wapi/v3",
+            //    new[] { EndpointSecurityType.UserData }, credentials,
+            //    apiClient.Throttler);
 
             coinsInfoCache = new SimpleCache<BinanceCoinInfo[]>(LoadCoinsInformation, logger, "CoinsInfoCache", 
                 data => data.Select(x => (BinanceCoinInfo)x.Clone()).ToArray());
@@ -34,6 +33,34 @@ namespace PoissonSoft.BinanceApi.Wallet
         public BinanceCoinInfo[] AllCoinsInformation(int cacheValidityIntervalSec = 600)
         {
             return coinsInfoCache.GetValue(TimeSpan.FromSeconds(cacheValidityIntervalSec));
+        }
+
+        public WithdrawResponse Withdraw(WithdrawRequest request)
+        {
+            return sApiClient.MakeRequest<WithdrawResponse>(
+                new RequestParameters(HttpMethod.Post, "capital/withdraw/apply", 1)
+                {
+                    PassAllParametersInQueryString = true,
+                    Parameters = RequestParameters.GenerateParametersFromObject(request)
+                });
+        }
+
+        public DepositInfo[] DepositHistory(DepositHistoryRequest request)
+        {
+            return sApiClient.MakeRequest<DepositInfo[]>(
+                new RequestParameters(HttpMethod.Get, "capital/deposit/hisrec", 1)
+                {
+                    Parameters = RequestParameters.GenerateParametersFromObject(request)
+                });
+        }
+
+        public WithdrawInfo[] WithdrawHistory(WithdrawHistoryRequest request)
+        {
+            return sApiClient.MakeRequest<WithdrawInfo[]>(
+                new RequestParameters(HttpMethod.Get, "capital/withdraw/history", 1)
+                {
+                    Parameters = RequestParameters.GenerateParametersFromObject(request)
+                });
         }
 
         public DepositAddress DepositAddress(string coin, string network = null)
@@ -61,7 +88,7 @@ namespace PoissonSoft.BinanceApi.Wallet
         public void Dispose()
         {
             sApiClient?.Dispose();
-            wApiClient?.Dispose();
+            //wApiClient?.Dispose();
         }
     }
 }

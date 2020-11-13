@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using PoissonSoft.BinanceApi.Contracts.Enums;
-using PoissonSoft.BinanceApi.Contracts.Serialization;
+﻿using Newtonsoft.Json;
 
 namespace PoissonSoft.BinanceApi.Contracts.SpotAccount
 {

@@ -1,5 +1,4 @@
-﻿using PoissonSoft.BinanceApi.Contracts;
-using PoissonSoft.BinanceApi.Contracts.SpotAccount;
+﻿using PoissonSoft.BinanceApi.Contracts.SpotAccount;
 
 namespace PoissonSoft.BinanceApi.SpotAccount
 {
