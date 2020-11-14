@@ -5,14 +5,12 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PoissonSoft.BinanceApi.Contracts.MarketDataStream;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Ws;
 using PoissonSoft.BinanceApi.Utils;
-using Timer = System.Timers.Timer;
 
 namespace PoissonSoft.BinanceApi.MarketDataStreams
 {
@@ -28,7 +26,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
 
         private readonly string userFriendlyName = nameof(MarketStreamsManager);
         private TimeSpan reconnectTimeout = TimeSpan.Zero;
-        private readonly Timer pongTimer;
 
         public DataStreamStatus WsConnectionStatus { get; private set; } = DataStreamStatus.Closed;
 
@@ -41,17 +38,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             streamListener.OnConnected += OnConnectToWs;
             streamListener.OnConnectionClosed += OnDisconnect;
             streamListener.OnMessage += OnStreamMessage;
-
-            // The websocket server will send a ping frame every 3 minutes. If the websocket server does not receive a pong
-            // frame back from the connection within a 10 minute period, the connection will be disconnected.
-            // Unsolicited pong frames are allowed.
-            pongTimer = new Timer
-            {
-                AutoReset = true, 
-                Enabled = false,
-                Interval = TimeSpan.FromMinutes(3).TotalMilliseconds
-            };
-            pongTimer.Elapsed += OnPongTimer;
         }
 
 
@@ -430,13 +416,10 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
             WsConnectionStatus = DataStreamStatus.Active;
             reconnectTimeout = TimeSpan.Zero;
             apiClient.Logger.Info($"{userFriendlyName}. Successfully connected to stream!");
-            pongTimer.Enabled = true;
         }
 
         private void OnDisconnect(object sender, (WebSocketCloseStatus? CloseStatus, string CloseStatusDescription) e)
         {
-            pongTimer.Enabled = false;
-
             if (disposed || WsConnectionStatus == DataStreamStatus.Closing) return;
 
             WsConnectionStatus = DataStreamStatus.Reconnecting;
@@ -467,14 +450,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
                     Thread.Sleep(reconnectTimeout);
                 }
             }
-        }
-
-        // The websocket server will send a ping frame every 3 minutes. If the websocket server does not receive a pong
-        // frame back from the connection within a 10 minute period, the connection will be disconnected.
-        // Unsolicited pong frames are allowed.
-        private void OnPongTimer(object sender, ElapsedEventArgs e)
-        {
-            streamListener.SendMessage("pong");
         }
 
         #endregion
@@ -692,13 +667,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
                 }
 
                 manualResetEventPool?.Dispose();
-
-                if (pongTimer != null)
-                {
-                    pongTimer.Enabled = false;
-                    pongTimer.Elapsed -= OnPongTimer;
-                    pongTimer.Dispose();
-                }
             }
 
             disposed = true;
