@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.Serialization;
 
 namespace PoissonSoft.BinanceApi.Contracts.Wallet
 {
@@ -42,6 +43,7 @@ namespace PoissonSoft.BinanceApi.Contracts.Wallet
         /// Withdrawing amount of the coin (REQUIRED)
         /// </summary>
         [JsonProperty("amount")]
+        [JsonConverter(typeof(DecimalToStringConverter))]
         public decimal Amount { get; set; }
 
         /// <summary>
