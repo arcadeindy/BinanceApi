@@ -60,6 +60,9 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         public DataStreamStatus Status { get; protected set; }
 
         /// <inheritdoc />
+        public bool NeedCloseListenKeyOnClosing { get; set; } = true;
+
+        /// <inheritdoc />
         public event EventHandler<AccountUpdatePayload> OnAccountUpdate;
 
         /// <inheritdoc />
@@ -136,7 +139,7 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
 
             try
             {
-                CloseListenKey(listenKey);
+                if (NeedCloseListenKeyOnClosing) CloseListenKey(listenKey);
             }
             catch (Exception e)
             {

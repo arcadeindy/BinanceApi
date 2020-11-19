@@ -26,6 +26,11 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
         DataStreamStatus Status { get; }
 
         /// <summary>
+        /// Требуется ли закрывать созданный ListenKey при закрытии потока
+        /// </summary>
+        bool NeedCloseListenKeyOnClosing { get; set; }
+
+        /// <summary>
         /// Событие обновления балансов аккаунта
         /// </summary>
         event EventHandler<AccountUpdatePayload> OnAccountUpdate;
