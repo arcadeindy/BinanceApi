@@ -480,12 +480,6 @@ namespace PoissonSoft.BinanceApi.MarketDataStreams
                 apiClient.Logger.Debug($"{userFriendlyName}. New payload received:\n{message}");
             }
 
-            if (message.ToUpperInvariant() == "PING")
-            {
-                // PING message
-                return;
-            }
-
             var jToken = JToken.Parse(message);
 
             if (jToken.Type != JTokenType.Object)
