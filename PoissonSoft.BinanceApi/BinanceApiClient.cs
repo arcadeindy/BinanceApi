@@ -10,7 +10,7 @@ using PoissonSoft.BinanceApi.Wallet;
 namespace PoissonSoft.BinanceApi
 {
     /// <summary>
-    /// Клиент для работы с API Binance
+    /// Клиент для работы с API Binance (Spot/Margin/Saving/Mining)
     /// </summary>
     public sealed class BinanceApiClient : IDisposable
     {
@@ -27,7 +27,7 @@ namespace PoissonSoft.BinanceApi
         {
             Logger = logger;
             this.credentials = credentials;
-            Throttler = new Throttler(this);
+            Throttler = new Throttler(logger, () => MarketDataApi.GetExchangeInfo()?.RateLimits);
             
             spotDataStream = new SpotUserDataStream(this, credentials);
             spotDataCollector = new SpotDataCollector(this);

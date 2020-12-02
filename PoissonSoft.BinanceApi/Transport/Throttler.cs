@@ -14,7 +14,8 @@ namespace PoissonSoft.BinanceApi.Transport
 {
     internal class Throttler: IDisposable
     {
-        private readonly BinanceApiClient apiClient;
+        private readonly ILogger logger;
+        private readonly Func<RateLimit[]> rateLimitProvider;
 
         private readonly string userFriendlyName = nameof(Throttler);
         private readonly WaitablePool syncPool;
@@ -54,12 +55,14 @@ namespace PoissonSoft.BinanceApi.Transport
         /// <summary>
         /// Create instance
         /// </summary>
-        /// <param name="apiClient"></param>
+        /// <param name="logger"></param>
+        /// <param name="rateLimitProvider">Метод, позволяющих получить актуальные лимиты запросов</param>
         /// <param name="maxDegreeOfParallelism">Максимальное допустимое количество параллельно выполняемых запросов</param>
         /// <param name="highPriorityFeedsCount">Количество feeds, выделяемое под исполнение запросов с высоким приоритетом</param>
-        public Throttler(BinanceApiClient apiClient, int maxDegreeOfParallelism = 5, int highPriorityFeedsCount = 1)
+        public Throttler(ILogger logger, Func<RateLimit[]> rateLimitProvider, int maxDegreeOfParallelism = 5, int highPriorityFeedsCount = 1)
         {
-            this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.rateLimitProvider = rateLimitProvider ?? throw new ArgumentNullException(nameof(rateLimitProvider));
             MaxDegreeOfParallelism = maxDegreeOfParallelism;
             if (MaxDegreeOfParallelism < 1) MaxDegreeOfParallelism = 1;
 
@@ -129,7 +132,7 @@ namespace PoissonSoft.BinanceApi.Transport
             else
             {
                 minWeightPerSecondLimit = 20;
-                apiClient.Logger.Error(
+                logger.Error(
                     $"{userFriendlyName}. Среди переданных в метод {nameof(ApplyLimits)} лимитов " +
                     $"не обнаружено ни одного валидного лимита типа {RateLimitType.RequestWeight}. " +
                     $"Будет использовано значение по умолчанию ({minWeightPerSecondLimit}) " +
@@ -162,7 +165,7 @@ namespace PoissonSoft.BinanceApi.Transport
             var waitTime = (DateTimeOffset.UtcNow - dt).TotalSeconds;
             if (waitTime > 5)
             {
-                apiClient.Logger.Warn($"{userFriendlyName}. Время ожидания тротлинга REST-запроса составило {waitTime:F0} секунд. " +
+                logger.Warn($"{userFriendlyName}. Время ожидания тротлинга REST-запроса составило {waitTime:F0} секунд. " +
                                       "Возможно, следует оптимизировать прикладные алгоритмы с целью сокращения количества запросов");
             }
 
@@ -192,7 +195,7 @@ namespace PoissonSoft.BinanceApi.Transport
             var waitTime = (DateTimeOffset.UtcNow - dt).TotalSeconds;
             if (waitTime > 5)
             {
-                apiClient.Logger.Warn($"{userFriendlyName}. Время ожидания тротлинга WebSocket-запроса составило {waitTime:F0} секунд. " +
+                logger.Warn($"{userFriendlyName}. Время ожидания тротлинга WebSocket-запроса составило {waitTime:F0} секунд. " +
                                       "Возможно, следует оптимизировать прикладные алгоритмы с целью сокращения количества запросов");
             }
         }
@@ -238,13 +241,14 @@ namespace PoissonSoft.BinanceApi.Transport
                 if (!ssUpdateLimits.Check()) return;
                 try
                 {
-                    var exchangeInfo = apiClient.MarketDataApi.GetExchangeInfo();
-                    ApplyLimits(exchangeInfo?.RateLimits);
+                    //var exchangeInfo = apiClient.MarketDataApi.GetExchangeInfo();
+                    //ApplyLimits(exchangeInfo?.RateLimits);
+                    ApplyLimits(rateLimitProvider());
                     ssUpdateLimits.Done();
                 }
                 catch (Exception e)
                 {
-                    apiClient.Logger.Error($"{userFriendlyName}. Exception when limit update\n{e}");
+                    logger.Error($"{userFriendlyName}. Exception when limit update\n{e}");
                 }
             }
         }
