@@ -1,5 +1,4 @@
-﻿using PoissonSoft.BinanceApi.Contracts;
-using PoissonSoft.BinanceApi.UsdtFutures.Contracts;
+﻿using PoissonSoft.BinanceApi.UsdtFutures.Contracts;
 
 namespace PoissonSoft.BinanceApi.UsdtFutures.MarketData
 {

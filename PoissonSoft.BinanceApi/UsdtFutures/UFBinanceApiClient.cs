@@ -28,7 +28,7 @@ namespace PoissonSoft.BinanceApi.UsdtFutures
             
             //spotDataStream = new SpotUserDataStream(this, credentials);
             //spotDataCollector = new SpotDataCollector(this);
-            marketDataApi = new UFMarketDataApi(this, credentials, logger);
+            marketDataApi = new UFMarketDataApi(Throttler, credentials, logger);
             //spotAccountApi = new SpotAccountApi(this, credentials, logger);
             //walletApi = new WalletApi(this, credentials, logger);
 

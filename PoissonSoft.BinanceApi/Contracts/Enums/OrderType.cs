@@ -54,5 +54,33 @@ namespace PoissonSoft.BinanceApi.Contracts.Enums
         /// </summary>
         [EnumMember(Value = "LIMIT_MAKER")]
         LimitMaker,
+
+        #region [Дополнительные типы ордеров для USDT-Futures]
+
+        /// <summary>
+        /// Stop Order
+        /// </summary>
+        [EnumMember(Value = "LIMIT_MAKER")]
+        Stop,
+
+        /// <summary>
+        /// Stop Market Order
+        /// </summary>
+        [EnumMember(Value = "STOP_MARKET")]
+        StopMarket,
+
+        /// <summary>
+        /// TakeProfit Market Order
+        /// </summary>
+        [EnumMember(Value = "TAKE_PROFIT_MARKET")]
+        TakeProfitMarket,
+
+        /// <summary>
+        /// Trailing Stop Market Order
+        /// </summary>
+        [EnumMember(Value = "TRAILING_STOP_MARKET")]
+        TrailingStopMarket,
+
+        #endregion
     }
 }

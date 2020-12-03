@@ -40,7 +40,7 @@ namespace PoissonSoft.BinanceApi.UsdtFutures.Contracts
         /// Торговые инструменты, доступные на бирже
         /// </summary>
         [JsonProperty("symbols")]
-        public TradeInstrument[] Symbols { get; set; }
+        public UFInstrument[] Symbols { get; set; }
 
         /// <inheritdoc />
         public object Clone()
@@ -51,7 +51,7 @@ namespace PoissonSoft.BinanceApi.UsdtFutures.Contracts
                 ServerTime = ServerTime,
                 RateLimits = RateLimits?.Select(x => (RateLimit)x.Clone()).ToArray(),
                 Filters = Filters?.Select(x => (ExchangeFilter)x.Clone()).ToArray(),
-                Symbols = Symbols?.Select(x => (TradeInstrument)x.Clone()).ToArray(),
+                Symbols = Symbols?.Select(x => (UFInstrument)x.Clone()).ToArray(),
             };
         }
     }

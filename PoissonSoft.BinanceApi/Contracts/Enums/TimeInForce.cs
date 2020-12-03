@@ -35,5 +35,15 @@ namespace PoissonSoft.BinanceApi.Contracts.Enums
         /// </summary>
         [EnumMember(Value = "FOK")]
         FOK,
+
+        #region [Дополнительные типы для USDT-Futures]
+
+        /// <summary>
+        /// Good Till Crossing (Post Only)
+        /// </summary>
+        [EnumMember(Value = "GTX")]
+        GTX,
+
+        #endregion
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using NLog;
-using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Rest;
 using PoissonSoft.BinanceApi.UsdtFutures.Contracts;
@@ -11,16 +10,13 @@ namespace PoissonSoft.BinanceApi.UsdtFutures.MarketData
 {
     internal class UFMarketDataApi: IUFMarketDataApi, IDisposable
     {
-        private readonly UFBinanceApiClient apiClient;
         private readonly RestClient client;
 
-        public UFMarketDataApi(UFBinanceApiClient apiClient, BinanceApiClientCredentials credentials, ILogger logger)
+        public UFMarketDataApi(Throttler throttler, BinanceApiClientCredentials credentials, ILogger logger)
         {
-
-            this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+            if (throttler == null) throw new ArgumentNullException(nameof(throttler));
             client = new RestClient(logger, "https://api.binance.com/api/v3",
-                new[] { EndpointSecurityType.None }, credentials,
-                this.apiClient.Throttler);
+                new[] { EndpointSecurityType.None }, credentials, throttler);
 
             exchangeInfoCache = new SimpleCache<UFExchangeInfo>(LoadExchangeInfo, logger);
         }
