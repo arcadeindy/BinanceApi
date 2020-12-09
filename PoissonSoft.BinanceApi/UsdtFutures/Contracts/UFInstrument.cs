@@ -86,7 +86,7 @@ namespace PoissonSoft.BinanceApi.UsdtFutures.Contracts
         /// (?) Тип актива, на базе которого построен данный фьючерс
         /// </summary>
         [JsonProperty("underlyingType")]
-        [JsonConverter(typeof(UnderlyingType), UnderlyingType.Unknown)]
+        [JsonConverter(typeof(StringEnumExConverter), UnderlyingType.Unknown)]
         public UnderlyingType UnderlyingType { get; set; }
 
         /// <summary>
