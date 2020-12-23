@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Timers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using NLog.Filters;
+using PoissonSoft.BinanceApi.Contracts.Exceptions;
 using PoissonSoft.BinanceApi.Contracts.Serialization;
 using PoissonSoft.BinanceApi.Contracts.UserDataStream;
 using PoissonSoft.BinanceApi.Transport;
@@ -156,9 +158,45 @@ namespace PoissonSoft.BinanceApi.UserDataStreams
             {
                 KeepAliveListenKey(listenKey);
             }
+            catch (EndpointCommunicationException ece) when(ece.Message.ToUpperInvariant().Contains("This listenKey does not exist".ToUpperInvariant()))
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. An obsolete listenKey has been detected. It will be reconnected with a new listenKey. Exception details:\n{ece}");
+                Task.Run(ReconnectWithNewListenKey);
+            }
             catch (Exception ex)
             {
                 apiClient.Logger.Error($"{userFriendlyName}. Exception when send ping to Listen Key:\n{ex}");
+            }
+        }
+
+        /// <summary>
+        /// Reconnection with new listenKey
+        /// </summary>
+        protected void ReconnectWithNewListenKey()
+        {
+            if (disposed) return;
+            try
+            {
+                Close();
+            }
+            catch (Exception e)
+            {
+                apiClient.Logger.Error($"{userFriendlyName}. {nameof(ReconnectWithNewListenKey)}. Exception when calling {nameof(Close)} method:\n{e}");
+            }
+            Status = DataStreamStatus.Closed;
+
+            while (Status == DataStreamStatus.Closed)
+            {
+                if (disposed) return;
+                try
+                {
+                    Open();
+                }
+                catch (Exception e)
+                {
+                    apiClient.Logger.Error($"{userFriendlyName}. {nameof(ReconnectWithNewListenKey)}. Exception when calling {nameof(Open)} method:\n{e}");
+                    Thread.Sleep(TimeSpan.FromSeconds(10));
+                }
             }
         }
 
