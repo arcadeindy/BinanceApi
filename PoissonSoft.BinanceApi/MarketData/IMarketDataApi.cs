@@ -1,4 +1,5 @@
 ﻿using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Contracts.MarketData;
 
 namespace PoissonSoft.BinanceApi.MarketData
 {
@@ -15,5 +16,11 @@ namespace PoissonSoft.BinanceApi.MarketData
         /// или были получены ранее указанного времени, то будут загружены актуальные данные</param>
         /// <returns></returns>
         ExchangeInfo GetExchangeInfo(int cacheValidityIntervalSec = 30 * 60);
+
+        /// <summary>
+        /// Цены по всем парам на бинансе
+        /// </summary>
+        /// <returns>Массив цен по парам</returns>
+        SymbolPrice[] TickersPrice();
     }
 }

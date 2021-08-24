@@ -2,6 +2,7 @@
 using System.Net.Http;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
+using PoissonSoft.BinanceApi.Contracts.MarketData;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Rest;
 using PoissonSoft.BinanceApi.Utils;
@@ -29,9 +30,15 @@ namespace PoissonSoft.BinanceApi.MarketData
         {
             return exchangeInfoCache.GetValue(TimeSpan.FromSeconds(cacheValidityIntervalSec));
         }
+
         private ExchangeInfo LoadExchangeInfo()
         {
             return client.MakeRequest<ExchangeInfo>(new RequestParameters(HttpMethod.Get, "exchangeInfo", 1));
+        }
+
+        public SymbolPrice[] TickersPrice()
+        {
+            return client.MakeRequest<SymbolPrice[]>(new RequestParameters(HttpMethod.Get, "ticker/price", 1));
         }
 
         public void Dispose()
