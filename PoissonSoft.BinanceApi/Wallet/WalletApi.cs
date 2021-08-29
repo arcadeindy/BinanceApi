@@ -82,7 +82,9 @@ namespace PoissonSoft.BinanceApi.Wallet
 
         private BinanceCoinInfo[] LoadCoinsInformation()
         {
-            return sApiClient.MakeRequest<BinanceCoinInfo[]>(new RequestParameters(HttpMethod.Get, "capital/config/getall", 1));
+            var request = new RequestParameters(HttpMethod.Get, "capital/config/getall", 1);
+            request.Parameters = new Dictionary<string, string> { { "recvWindow", "30000" } };
+            return sApiClient.MakeRequest<BinanceCoinInfo[]>(request);
         }
 
         public void Dispose()

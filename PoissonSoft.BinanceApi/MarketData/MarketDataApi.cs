@@ -33,12 +33,12 @@ namespace PoissonSoft.BinanceApi.MarketData
 
         private ExchangeInfo LoadExchangeInfo()
         {
-            return client.MakeRequest<ExchangeInfo>(new RequestParameters(HttpMethod.Get, "exchangeInfo", 1));
+            return client.MakeRequest<ExchangeInfo>(new RequestParameters(HttpMethod.Get, "exchangeInfo", 10));
         }
 
         public SymbolPrice[] TickersPrice()
         {
-            return client.MakeRequest<SymbolPrice[]>(new RequestParameters(HttpMethod.Get, "ticker/price", 1));
+            return client.MakeRequest<SymbolPrice[]>(new RequestParameters(HttpMethod.Get, "ticker/price", 2));
         }
 
         public void Dispose()
