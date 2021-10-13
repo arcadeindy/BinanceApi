@@ -22,5 +22,11 @@ namespace PoissonSoft.BinanceApi.MarketData
         /// </summary>
         /// <returns>Массив цен по парам</returns>
         SymbolPrice[] TickersPrice();
+
+        /// <summary>
+        /// Содержимое стакана
+        /// </summary>
+        /// <returns>Позиции bids и asks</returns>
+        OrderBook OrderBook(OrderBookRequest request);
     }
 }

@@ -3,6 +3,7 @@ using System.Net.Http;
 using NLog;
 using PoissonSoft.BinanceApi.Contracts;
 using PoissonSoft.BinanceApi.Contracts.MarketData;
+using PoissonSoft.BinanceApi.Contracts.Wallet;
 using PoissonSoft.BinanceApi.Transport;
 using PoissonSoft.BinanceApi.Transport.Rest;
 using PoissonSoft.BinanceApi.Utils;
@@ -39,6 +40,16 @@ namespace PoissonSoft.BinanceApi.MarketData
         public SymbolPrice[] TickersPrice()
         {
             return client.MakeRequest<SymbolPrice[]>(new RequestParameters(HttpMethod.Get, "ticker/price", 2));
+        }
+
+        public OrderBook OrderBook(OrderBookRequest request)
+        {
+            return client.MakeRequest<OrderBook>(
+                new RequestParameters(HttpMethod.Get, "depth", 1)
+                {
+                    PassAllParametersInQueryString = true,
+                    Parameters = RequestParameters.GenerateParametersFromObject(request)
+                });
         }
 
         public void Dispose()

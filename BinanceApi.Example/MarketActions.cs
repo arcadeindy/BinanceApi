@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
+using PoissonSoft.BinanceApi.Contracts.MarketData;
 using PoissonSoft.BinanceApi.Contracts.MarketDataStream;
 using PoissonSoft.CommonUtils.ConsoleUtils;
 
@@ -14,6 +15,7 @@ namespace BinanceApi.Example
             var actions = new Dictionary<ConsoleKey, string>()
             {
                 [ConsoleKey.I] = "Exchange Information",
+                [ConsoleKey.B] = "Order book",
                 [ConsoleKey.Escape] = "Go back (to main menu)",
             };
 
@@ -25,6 +27,19 @@ namespace BinanceApi.Example
                     SafeCall(() =>
                     {
                         var exchangeInfo = apiClient.MarketDataApi.GetExchangeInfo();
+                        Console.WriteLine(JsonConvert.SerializeObject(exchangeInfo, Formatting.Indented));
+                    });
+                    return true;
+
+                case ConsoleKey.B:
+                    SafeCall(() =>
+                    {
+                        var req = new OrderBookRequest
+                        {
+                            Symbol = InputHelper.GetString("Symbol: "),
+                            Limit = InputHelper.GetInt("Limit: ")
+                        };
+                        var exchangeInfo = apiClient.MarketDataApi.OrderBook(req);
                         Console.WriteLine(JsonConvert.SerializeObject(exchangeInfo, Formatting.Indented));
                     });
                     return true;
