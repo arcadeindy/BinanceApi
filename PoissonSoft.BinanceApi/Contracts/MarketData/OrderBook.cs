@@ -20,12 +20,12 @@ namespace PoissonSoft.BinanceApi.Contracts.MarketData
         /// Bids
         /// </summary>
         [JsonProperty("bids")]
-        public string[][] Bids { get; set; }
+        public decimal[][] Bids { get; set; }
 
         /// <summary>
         /// asks
         /// </summary>
         [JsonProperty("asks")]
-        public string[][] Asks { get; set; }
+        public decimal[][] Asks { get; set; }
     }
 }
